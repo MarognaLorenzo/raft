@@ -14,4 +14,11 @@ impl <T: ComponentState, S> Component <T, S> {
     pub fn open_message(&self) -> S {
         self.rx.recv().unwrap()
     }
+
+    pub fn get_name(&self) -> usize {
+        self.name
+    }
+
+    pub fn yell(&self) {
+    }
 }

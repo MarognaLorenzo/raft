@@ -2,14 +2,35 @@ mod component;
 use component::{Component, Leader, Follower, Candidate, Initial};
 use std::collections::HashMap;
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::thread::{sleep, JoinHandle};
+use std::time::Duration;
 use std::{str, thread, usize, vec};
+use std::io::{self, Write};
 
 fn main() {
     let n_servers = 5usize;
     let servers = initialize_servers(n_servers);
     println!("Server 0 amount of neighbours: {}", servers[0].neighbours_len());
-    servers[0].send_message(48392, 3);
-    println!("Server received this: {}",servers[3].open_message());
+
+
+    let handles:Vec<JoinHandle<_>> = servers.into_iter()
+        .map(|server| {
+            thread::spawn(move || {
+                // loop {
+                    server.send_message(10000+server.get_name() as i32, (server.get_name()+1)%n_servers);
+                    let message = server.open_message();
+                    println!("I ({}) received a message! {}",server.get_name(), message );
+                // }
+            })
+        })
+    .collect();
+
+    println!("DONE");
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
 }
 
 
