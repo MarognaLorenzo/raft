@@ -1,47 +1,29 @@
-pub struct Component<S> {
+use std::sync::mpsc::{Receiver, Sender};
+
+pub struct Initial;
+pub struct Leader;
+pub struct Candidate;
+pub struct Follower;
+
+pub trait ComponentState{}
+
+impl ComponentState for Initial {}
+impl ComponentState for Leader {}
+impl ComponentState for Follower {}
+impl ComponentState for Candidate {}
+
+pub struct Component<S: ComponentState, MessageType> {
     _state: std::marker::PhantomData<S>,
+    log: Vec<i32>,
+    name: i32,
+    total_elements: i32,
+    rx: Receiver<MessageType>,
+    neighbours: Vec<Sender<MessageType>>
 }
 
-pub struct Off;
-pub struct On;
-pub struct Broken;
-
-impl Component<Off> {
-    pub fn new() -> Self {
-        Component{
-            _state: std::marker::PhantomData
-        }
-    }
-
-    pub fn turn_on(self) -> Component<On> {
-        println!("Swithching on!");
-        Component{
-            _state : std::marker::PhantomData
-        }
-    }
-}
-
-impl Component<On> {
-    pub fn turn_off(self) -> Component<Off> {
-        println!("Swithching off!");
-        Component{
-            _state: std::marker::PhantomData
-        }
-    }
-
-    pub fn drop(self) -> Component<Broken> {
-        println!("Oh no your dropping me!");
-        Component{
-            _state: std::marker::PhantomData
-        }
-    }
-}
-
-impl Component<Broken> {
-    pub fn lament (self) {
-        println!("Oh no I am broken forever");
-    }
-
-}
-
+mod initial;
+mod candidate;
+mod leader;
+mod follower;
+mod common;
 

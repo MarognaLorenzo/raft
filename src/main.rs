@@ -1,8 +1,37 @@
 mod component;
-use component::{Component, Off, On, Broken};
+use component::{Component, Leader, Follower, Candidate, Initial};
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::{str, thread, usize, vec};
+
+use crate::component::ComponentState;
+
 fn main() {
-    let component = Component::<Off>::new();
-    let light = component.turn_on();
-    let light = light.turn_off().turn_on().drop().lament();
+    let n_servers = 5usize;
+    let names: Vec<usize> = (0usize..n_servers).collect();
+
+    let mut senders: Vec<Sender<i32>> = Vec::with_capacity(n_servers);
+
+    let mut servers:Vec<Component<Initial, i32>>= names.iter().enumerate()
+        .map(|(i, &name)| {
+            let (sender, receiver) = channel::<i32>();
+            senders.push(sender);
+            Component::<Initial, i32>::new(name as i32, n_servers as i32, receiver, vec![])
+        })
+        .collect();
+
+    println!("Servers {}", servers.len());
+
+    for (i, sender) in senders.iter().enumerate() {
+        for (j, server) in servers.iter_mut().enumerate() {
+            if i != j {
+                let send= sender.clone();
+                 server.add_sender(send);
+            }
+        }
+    }
+    // let servers :Vec<Component<Candidate, i32>>= servers.iter_mut().map(move |server| server.activate()).collect();
+    let servers :Vec<Component<Candidate, i32>>= servers.into_iter().map(|ser| ser.activate()).collect();
+
+    println!("Server 0 amount of neighbours: {}", servers[0].neighbours_len());
 }
 
