@@ -1,5 +1,6 @@
 mod component;
 use component::{Component, Leader, Follower, Candidate, Initial};
+use std::collections::HashMap;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::{str, thread, usize, vec};
 
@@ -15,9 +16,9 @@ fn main() {
         .map(|(i, &name)| {
             let (sender, receiver) = channel::<i32>();
             senders.push(sender);
-            Component::<Initial, i32>::new(name as i32, n_servers as i32, receiver, vec![])
+            Component::<Initial, i32>::new(name, n_servers, receiver, HashMap::<usize, Sender<i32>>::new() )
         })
-        .collect();
+    .collect();
 
     println!("Servers {}", servers.len());
 
@@ -25,13 +26,14 @@ fn main() {
         for (j, server) in servers.iter_mut().enumerate() {
             if i != j {
                 let send= sender.clone();
-                 server.add_sender(send);
+                 server.add_sender(i, send);
             }
         }
     }
-    // let servers :Vec<Component<Candidate, i32>>= servers.iter_mut().map(move |server| server.activate()).collect();
-    let servers :Vec<Component<Candidate, i32>>= servers.into_iter().map(|ser| ser.activate()).collect();
 
+    let servers :Vec<Component<Candidate, i32>>= servers.into_iter().map(|ser| ser.activate()).collect();
     println!("Server 0 amount of neighbours: {}", servers[0].neighbours_len());
+    servers[0].send_message(48392, 3);
+    println!("Server received this: {}",servers[3].open_message());
 }
 
