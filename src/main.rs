@@ -14,7 +14,6 @@ fn main() {
     println!("Server 0 amount of neighbours: {}", servers[0].neighbours_len());
 
 
-/* 
     let handles:Vec<JoinHandle<_>> = servers.into_iter()
         .map(|server| {
             thread::spawn(move || {
@@ -32,7 +31,6 @@ fn main() {
     for handle in handles {
         handle.join().unwrap();
     }
- */
 
     
 }

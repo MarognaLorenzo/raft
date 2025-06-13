@@ -1,5 +1,9 @@
 use super::{Component, Candidate, Leader, Follower};
 impl Component<Candidate> {
+    
+   async fn start_listening() {
+
+   }
    pub fn candidate(&self){
         for neigh in self.neighbours.values() {
             neigh.send(super::message::Message::VoteRequest { 
