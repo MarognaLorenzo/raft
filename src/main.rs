@@ -1,18 +1,20 @@
 mod component;
 use component::{Component, Leader, Follower, Candidate, Initial};
+use component::message::Message;
 use std::collections::HashMap;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::{sleep, JoinHandle};
-use std::time::Duration;
 use std::{str, thread, usize, vec};
 use std::io::{self, Write};
 
 fn main() {
     let n_servers = 5usize;
     let servers = initialize_servers(n_servers);
+    let servers :Vec<Component<Candidate>>= servers.into_iter().map(|ser| ser.activate()).collect();
     println!("Server 0 amount of neighbours: {}", servers[0].neighbours_len());
 
 
+/* 
     let handles:Vec<JoinHandle<_>> = servers.into_iter()
         .map(|server| {
             thread::spawn(move || {
@@ -30,24 +32,26 @@ fn main() {
     for handle in handles {
         handle.join().unwrap();
     }
+ */
 
+    
 }
 
 
 
-pub fn initialize_servers(n_servers: usize) -> Vec<Component<Candidate, i32>> {
-    let mut senders: Vec<Sender<i32>> = Vec::with_capacity(n_servers);
+pub fn initialize_servers(n_servers: usize) -> Vec<Component<Initial>> {
+    let mut senders: Vec<Sender<Message>> = Vec::with_capacity(n_servers);
 
     let names: Vec<usize> = (0usize..n_servers).collect();
-    let mut servers:Vec<Component<Initial, i32>>= names.iter()
+    let mut servers:Vec<Component<Initial>>= names.iter()
         .map(|&name| {
-            let (sender, receiver) = channel::<i32>();
+            let (sender, receiver) = channel::<Message>();
             senders.push(sender);
-            Component::<Initial, i32>::new(
+            Component::<Initial>::new(
                 name,
                 n_servers,
                 receiver,
-                HashMap::<usize, Sender<i32>>::new()
+                HashMap::<usize, Sender<Message>>::new()
                 )
         })
     .collect();
@@ -63,7 +67,6 @@ pub fn initialize_servers(n_servers: usize) -> Vec<Component<Candidate, i32>> {
         }
     }
 
-    let servers :Vec<Component<Candidate, i32>>= servers.into_iter().map(|ser| ser.activate()).collect();
     
     return servers;
 }

@@ -1,6 +1,16 @@
 use super::{Component, Candidate, Leader, Follower};
-impl <MessageType>Component<Candidate, MessageType> {
-   pub fn get_elected(self) -> Component<Leader, MessageType> {
+impl Component<Candidate> {
+   pub fn candidate(&self){
+        for neigh in self.neighbours.values() {
+            neigh.send(super::message::Message::VoteRequest { 
+                candidate_id: self.name, 
+                candidate_term: self.term, 
+                log_length: 0, 
+                last_term: 0 
+            }).unwrap();
+        }
+   }
+   pub fn get_elected(self) -> Component<Leader> {
         println!("My self {} got elected as Leader!", self.name);
         Component{
             _state: std::marker::PhantomData,
@@ -9,10 +19,12 @@ impl <MessageType>Component<Candidate, MessageType> {
             total_elements: self.total_elements,
             rx: self.rx,
             neighbours: self.neighbours,
+            term: self.term,
+            voted_for: self.voted_for,
         }
     }
 
-    pub fn drop(self) -> Component<Follower, MessageType> {
+    pub fn drop(self) -> Component<Follower> {
         println!("Oh no your dropping me!");
         Component{
             _state: std::marker::PhantomData,
@@ -21,6 +33,8 @@ impl <MessageType>Component<Candidate, MessageType> {
             total_elements: self.total_elements,
             rx: self.rx,
             neighbours: self.neighbours,
+            term: self.term,
+            voted_for: self.voted_for,
         }
     }
 }

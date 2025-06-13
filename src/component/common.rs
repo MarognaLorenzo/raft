@@ -1,17 +1,17 @@
-use crate::component::ComponentState;
+use crate::component::{message::Message, StateTrait};
 
 use super::{Component};
 
-impl <T: ComponentState, S> Component <T, S> {
+impl <T: StateTrait> Component <T> {
     pub fn neighbours_len(&self) -> usize {
         self.neighbours.len()
     }
 
-    pub fn send_message(&self, message: S, neighbour: usize) {
+    pub fn send_message(&self, message: Message, neighbour: usize) {
         self.neighbours[&neighbour].send(message).unwrap()
     }
 
-    pub fn open_message(&self) -> S {
+    pub fn open_message(&self) -> Message {
         self.rx.recv().unwrap()
     }
 

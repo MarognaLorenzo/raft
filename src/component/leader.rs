@@ -1,6 +1,6 @@
 use super::{Leader, Component, Candidate};
-impl <MessageType>Component<Leader, MessageType> {
-    pub fn turn_on(self) -> Component<Candidate, MessageType> {
+impl Component<Leader> {
+    pub fn turn_on(self) -> Component<Candidate> {
         println!("Swithching on!");
         Component{
             _state : std::marker::PhantomData,
@@ -9,6 +9,8 @@ impl <MessageType>Component<Leader, MessageType> {
             total_elements: self.total_elements,
             rx: self.rx,
             neighbours: self.neighbours,
+            term: self.term,
+            voted_for: self.voted_for,
         }
     }
 }
