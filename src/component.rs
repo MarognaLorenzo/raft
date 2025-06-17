@@ -1,7 +1,8 @@
-use std::{collections::HashMap, sync::mpsc::{Receiver, Sender}};
+use std::{collections::HashMap, };
 
 pub mod message;
 use message::Message;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 pub struct Initial;
 pub struct Leader;

@@ -7,12 +7,12 @@ impl <T: StateTrait> Component <T> {
         self.neighbours.len()
     }
 
-    pub fn send_message(&self, message: Message, neighbour: usize) {
-        self.neighbours[&neighbour].send(message).unwrap()
+    pub async fn send_message(&self, message: Message, neighbour: usize) {
+        self.neighbours[&neighbour].send(message).await.unwrap()
     }
 
-    pub fn open_message(&self) -> Message {
-        self.rx.recv().unwrap()
+    pub async fn open_message(&mut self) -> Message {
+        self.rx.recv().await.unwrap()
     }
 
     pub fn get_name(&self) -> usize {

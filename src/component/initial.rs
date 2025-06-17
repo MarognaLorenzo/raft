@@ -1,8 +1,9 @@
+use tokio::sync::mpsc::{Receiver, Sender};
+
 use crate::component::message::Message;
 use crate::component::Candidate;
 
 use super::{Component, Initial};
-use std::sync::mpsc::{self, Receiver, Sender};
 use std::collections::HashMap;
 
 impl Component<Initial>{
