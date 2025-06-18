@@ -1,17 +1,15 @@
 use super::{Component, Candidate, Leader, Follower};
 impl Component<Candidate> {
     
-   async fn start_listening() {
-
-   }
    pub fn candidate(&self){
         for neigh in self.neighbours.values() {
-            neigh.send(super::message::Message::VoteRequest { 
+         neigh.send(super::message::Message::VoteRequest { 
                 candidate_id: self.name, 
                 candidate_term: self.term, 
                 log_length: 0, 
                 last_term: 0 
             }).unwrap();
+
         }
    }
    pub fn get_elected(self) -> Component<Leader> {

@@ -1,8 +1,7 @@
-use tokio::sync::mpsc::{Receiver, Sender};
-
 use crate::component::message::Message;
 use crate::component::Candidate;
 
+use crossbeam::channel::*;
 use super::{Component, Initial};
 use std::collections::HashMap;
 
@@ -40,7 +39,7 @@ impl Component<Initial>{
         term: self.term,
         voted_for: self.voted_for,
         };
-        component.candidate();
+        // component.candidate();
         return component
     }
 

@@ -2,7 +2,7 @@ use std::{collections::HashMap, };
 
 pub mod message;
 use message::Message;
-use tokio::sync::mpsc::{Receiver, Sender};
+use crossbeam::channel::*;
 
 pub struct Initial;
 pub struct Leader;
@@ -26,7 +26,7 @@ pub struct Component<S: StateTrait> {
     name: usize,
     total_elements: usize,
     rx: Receiver<Message>,
-    neighbours: HashMap<usize, Sender<Message>>,
+    pub neighbours: HashMap<usize, Sender<Message>>,
     term: usize,
     voted_for: Option<usize>,
 }
