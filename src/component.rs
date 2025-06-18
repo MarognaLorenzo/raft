@@ -1,7 +1,9 @@
 use std::{collections::HashMap, };
 
+pub mod order;
+use order::Order;
 pub mod message;
-use message::Message;
+use message::ComponentMessage;
 use crossbeam::channel::*;
 
 pub struct Initial;
@@ -25,8 +27,9 @@ pub struct Component<S: StateTrait> {
     log: Vec<i32>,
     name: usize,
     total_elements: usize,
-    rx: Receiver<Message>,
-    pub neighbours: HashMap<usize, Sender<Message>>,
+    command_rx: Receiver<Order>,
+    network_rx: Receiver<ComponentMessage>,
+    pub neighbours: HashMap<usize, Sender<ComponentMessage>>,
     term: usize,
     voted_for: Option<usize>,
 }

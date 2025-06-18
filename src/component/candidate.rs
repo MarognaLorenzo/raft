@@ -3,7 +3,7 @@ impl Component<Candidate> {
     
    pub fn candidate(&self){
         for neigh in self.neighbours.values() {
-         neigh.send(super::message::Message::VoteRequest { 
+         neigh.send(super::message::ComponentMessage::VoteRequest { 
                 candidate_id: self.name, 
                 candidate_term: self.term, 
                 log_length: 0, 
@@ -19,7 +19,8 @@ impl Component<Candidate> {
             name: self.name, 
             log: self.log,
             total_elements: self.total_elements,
-            rx: self.rx,
+            network_rx: self.network_rx,
+            command_rx: self.command_rx,
             neighbours: self.neighbours,
             term: self.term,
             voted_for: self.voted_for,
@@ -33,7 +34,8 @@ impl Component<Candidate> {
             name: self.name,
             log: self.log,
             total_elements: self.total_elements,
-            rx: self.rx,
+            command_rx: self.command_rx,
+            network_rx: self.network_rx,
             neighbours: self.neighbours,
             term: self.term,
             voted_for: self.voted_for,

@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub enum Message {
+pub enum ComponentMessage {
 
     Ping{
         from: usize, 

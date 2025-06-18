@@ -1,16 +1,18 @@
 mod component;
 use component::{Component, Leader, Follower, Candidate, Initial};
-use component::message::Message;
+use component::message::ComponentMessage;
 use std::collections::HashMap;
 use std::{str, thread, usize, vec};
 use std::io::{self, Write};
 use crossbeam::channel::*;
 
+use crate::component::order::Order;
+
 fn main() {
     let n_servers = 5usize;
-    let servers = initialize_servers(n_servers);
+    let (servers, controllers) = initialize_servers(n_servers);
 
-    let servers :Vec<Component<Candidate>>= servers.into_iter().map(|ser| ser.activate()).collect();
+    let servers :Vec<Component<Candidate>>= servers.into_iter().map(|ser| ser.completed()).collect();
     // println!("Server 0 amount of neighbours: {}", servers[0].neighbours_len());
 
     
@@ -19,7 +21,7 @@ fn main() {
             std::thread::spawn( move || {
                 let from = server.get_name();
                 let to = (from + 1) % n_servers;
-                let builded_message : Message = Message::Ping{ 
+                let builded_message : ComponentMessage = ComponentMessage::Ping{ 
                     from: from, 
                     to: to,
                 };
@@ -28,11 +30,14 @@ fn main() {
                 }
                 let received_message = server.open_message(); 
                 println!("I ({}) received a message! {:?}",server.get_name(), received_message);
+
+
+
+
+                // server.
             })
         }).collect();
-    // TODO - Fix the mutable problems and understand why recv wants &mut self 
     // TODO - :
-    // * Use the beam thing
     // * Get receiver from the world and receiver from private network
     // * Do a select loop in which you see which receiver has messages and then handle the
     // message 
@@ -49,19 +54,23 @@ fn main() {
 
 
 
-pub fn initialize_servers(n_servers: usize) -> Vec<Component<Initial>> {
-    let mut senders: Vec<Sender<Message>> = Vec::with_capacity(n_servers);
+pub fn initialize_servers(n_servers: usize) -> (Vec<Component<Initial>>, Vec<Sender<Order>>) {
+    let mut senders: Vec<Sender<ComponentMessage>> = Vec::with_capacity(n_servers);
 
+    let mut controllers: Vec<Sender<Order>> = Vec::with_capacity(n_servers);
     let names: Vec<usize> = (0usize..n_servers).collect();
     let mut servers:Vec<Component<Initial>>= names.iter()
         .map(|&name| {
             let (sender, receiver) = crossbeam::channel::unbounded();
             senders.push(sender);
+            let (world_sender, world_receiver) = unbounded();
+            controllers.push(world_sender);
             Component::<Initial>::new(
                 name,
                 n_servers,
+                world_receiver,
                 receiver,
-                HashMap::<usize, Sender<Message>>::new()
+                HashMap::<usize, Sender<ComponentMessage>>::new()
                 )
         })
     .collect();
@@ -80,5 +89,5 @@ pub fn initialize_servers(n_servers: usize) -> Vec<Component<Initial>> {
     println!("Senders size: {}", servers[0].neighbours_len());
 
     
-    return servers;
+    return (servers, controllers);
 }
