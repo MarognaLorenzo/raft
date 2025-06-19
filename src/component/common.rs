@@ -16,39 +16,35 @@ impl <T: StateT> Server <T> {
     pub fn open_message(&self) -> ServerMessage {
         self.message_rx.recv().unwrap()
     }
-
-    pub fn yell(&self) {
-    }
-
     pub fn get_name(&self) -> usize {
         self.name
     }
-
-    fn get_command_receiver(&self) -> &Receiver<Order> {
-        &self.order_rx
-    }
-
-    fn get_network_receiver(&self) -> &Receiver<ServerMessage> {
-        &self.message_rx
-    }
 }
+
 impl<T> Server<T>
 where 
     Server<T> : ServerT,
     T: StateT,
 {
-    pub fn activate(&self) {
+    pub fn activate(self) {
+        let order_receiver = self.order_rx.clone();
+        let message_receiver = self.message_rx.clone();
+
+        let mut boxed: Box<dyn ServerT> = Box::new(self);
         loop {
             select_biased!(
-                recv(self.get_command_receiver()) -> mes => {
-                    println!("ciao from me command {}!", self.get_name());
-                    if self.handle_order(mes.unwrap()) {
+                recv(order_receiver) -> mes => {
+                    println!("ciao from me command {:?}!", boxed);
+                    let (stop, next) = boxed.handle_order(mes.unwrap());
+                    boxed = next;
+                    if stop {
                         break;
                     }
                 }
-                recv(self.get_network_receiver()) -> mes => {
-                    println!("ciao from me network {}!", self.get_name());
-                    self.handle_component_message(mes.unwrap());
+                recv(message_receiver) -> mes => {
+                    println!("ciao from me network {:?}!", boxed);
+                    let next = boxed.handle_server_message(mes.unwrap());
+                    boxed = next;
                 }
             )
         }

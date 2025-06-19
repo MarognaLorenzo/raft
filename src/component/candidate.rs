@@ -46,12 +46,19 @@ impl Server<Candidate> {
 }
 
 impl ServerT for Server<Candidate>{
-    fn handle_order(&self, order: super::order::Order) -> bool {
+    fn handle_server_message(self: Box<Self>, message: super::message::ServerMessage) -> Box<dyn ServerT> {
+        Box::new(*self)
+    }
+
+    fn handle_order(self: Box<Self>, order: Order) -> (bool, Box<dyn ServerT>) {
+        return (true, Box::new(*self))
+    }
+    /* fn handle_order(&self, order: super::order::Order) -> bool {
         match order {
             Order::SendInfo { info } => {
                 println!("Received: {}", info);
                 true
             }
         }
-    }
+    } */
 }

@@ -1,3 +1,5 @@
+use crate::component::{order::Order, ServerT};
+
 use super::{Leader, Server, Candidate};
 
 impl Server<Leader> {
@@ -18,3 +20,19 @@ impl Server<Leader> {
 }
 
 
+impl ServerT for Server<Leader>{
+    fn handle_order(self: Box<Self>, order: Order) -> (bool, Box<dyn ServerT>) {
+        (true, Box::new(*self)) 
+    }
+    fn handle_server_message(self: Box<Self>, message: super::message::ServerMessage) -> Box<dyn ServerT> {
+        Box::new(*self)
+    }
+    /* fn handle_order(&self, order: super::order::Order) -> bool {
+        match order {
+            Order::SendInfo { info } => {
+                println!("Received: {}", info);
+                true
+            }
+        }
+    } */
+}

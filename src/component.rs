@@ -1,4 +1,5 @@
 use std::{collections::HashMap, };
+use std::fmt::Debug;
 
 pub mod order;
 use order::Order;
@@ -6,23 +7,29 @@ pub mod message;
 use message::ServerMessage;
 use crossbeam::channel::*;
 
+#[derive(Debug)]
 pub struct Initial;
+#[derive(Debug)]
 pub struct Leader;
+#[derive(Debug)]
 pub struct Candidate{
     voting_received: usize,
 }
+#[derive(Debug)]
 pub struct Follower{
     leader: usize,
 }
 
-pub trait ServerT {
-    fn handle_component_message(&self, message: ServerMessage) {
+pub trait ServerT: Debug{
+    fn handle_server_message(self: Box<Self>, message: ServerMessage) -> Box<dyn ServerT>{
         panic!("I should be implemented!")
     }
 
-    fn handle_order(&self, order: Order) -> bool{
+    fn handle_order(self: Box<Self>, order: Order) -> (bool, Box<dyn ServerT>){
         panic!("I should be implemented!")
     }
+
+    // fn get_receivers(self: &Box<Self>) -> (&Receiver<Order>, &Receiver<ServerMessage>);
 }
 pub trait StateT{}
 
@@ -31,6 +38,7 @@ impl StateT for Leader {}
 impl StateT for Follower {}
 impl StateT for Candidate {}
 
+#[derive(Debug)]
 pub struct Server<S: StateT> {
     _state: std::marker::PhantomData<S>,
     log: Vec<i32>,

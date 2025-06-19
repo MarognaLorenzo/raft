@@ -1,5 +1,5 @@
 use crate::component::{message::ServerMessage, order::Order};
-use crate::component::Candidate;
+use crate::component::{Candidate, ServerT};
 
 use crossbeam::channel::*;
 use super::{Server, Initial};
@@ -46,4 +46,22 @@ impl Server<Initial>{
         return component
     }
 
+}
+
+
+impl ServerT for Server<Initial>{
+    fn handle_order(self: Box<Self>, order: Order) -> (bool, Box<dyn ServerT>) {
+        (true, Box::new(*self)) 
+    }
+    fn handle_server_message(self: Box<Self>, message: super::message::ServerMessage) -> Box<dyn ServerT> {
+        Box::new(*self)
+    }
+    /* fn handle_order(&self, order: super::order::Order) -> bool {
+        match order {
+            Order::SendInfo { info } => {
+                println!("Received: {}", info);
+                true
+            }
+        }
+    } */
 }
