@@ -155,7 +155,7 @@ impl ServerT for Server<Candidate> {
                 responser_id, 
                 responder_term,
                 response 
-            } => self.on_vote_receive(responser_id, responder_term, response)
+            } => self.on_vote_receive(responser_id, responder_term, response),
             _ => Box::new(*self),
         }
     }
@@ -165,7 +165,7 @@ impl ServerT for Server<Candidate> {
             Order::SendInfo { info } => {
                 println!("I am candidate {} and I received info {}", self.name, info);
                 (false, Box::new(*self))
-            }
+            },
             Order::Exit => (true, Box::new(*self)),
             Order::ConvertToFollower => (false, Box::new((*self).to_follower())),
             Order::ConvertToCandidate => (false, Box::new(*self)),
