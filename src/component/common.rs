@@ -1,20 +1,20 @@
 use crossbeam::channel::{select_biased, Receiver};
 
-use crate::component::{message::ComponentMessage, order::Order, ComponentTrait, StateTrait};
+use crate::component::{message::ServerMessage, order::Order, ServerT, StateT};
 
-use super::{Component};
+use super::{Server};
 
-impl <T: StateTrait> Component <T> {
+impl <T: StateT> Server <T> {
     pub fn neighbours_len(&self) -> usize {
         self.neighbours.len()
     }
 
-    pub fn send_message(&self, message: ComponentMessage, neighbour: usize)-> Result<(), crossbeam::channel::SendError<ComponentMessage>> {
+    pub fn send_message(&self, message: ServerMessage, neighbour: usize)-> Result<(), crossbeam::channel::SendError<ServerMessage>> {
         self.neighbours[&neighbour].send(message)
     }
 
-    pub fn open_message(&self) -> ComponentMessage {
-        self.network_rx.recv().unwrap()
+    pub fn open_message(&self) -> ServerMessage {
+        self.message_rx.recv().unwrap()
     }
 
     pub fn yell(&self) {
@@ -25,17 +25,17 @@ impl <T: StateTrait> Component <T> {
     }
 
     fn get_command_receiver(&self) -> &Receiver<Order> {
-        &self.command_rx
+        &self.order_rx
     }
 
-    fn get_network_receiver(&self) -> &Receiver<ComponentMessage> {
-        &self.network_rx
+    fn get_network_receiver(&self) -> &Receiver<ServerMessage> {
+        &self.message_rx
     }
 }
-impl<T> Component<T>
+impl<T> Server<T>
 where 
-    Component<T> : ComponentTrait,
-    T: StateTrait,
+    Server<T> : ServerT,
+    T: StateT,
 {
     pub fn activate(&self) {
         loop {
