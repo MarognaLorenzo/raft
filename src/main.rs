@@ -32,10 +32,14 @@ fn main() {
                 }
                 let received_message = server.open_message(); 
                 println!("I ({}) received a message! {:?}",server.get_name(), received_message);
-                thread::sleep(Duration::from_secs(1));
                 server.activate();
             })
         }).collect();
+
+    thread::sleep(Duration::from_secs(3));
+
+    println!();
+    println!("Sending INFO!");
 
     controllers.iter().for_each(|tx| tx.send(Order::SendInfo { info: 10 }).unwrap());
 
