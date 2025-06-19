@@ -1,7 +1,7 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ServerMessage {
-    Ping{
-        from: usize, 
+    Ping {
+        from: usize,
         to: usize,
     },
     VoteRequest {
@@ -10,15 +10,14 @@ pub enum ServerMessage {
         log_length: usize,
         last_term: usize,
     },
-    VoteResponse{
+    VoteResponse {
         responser_id: usize,
-        current_term: usize,
+        responder_term: usize,
         response: bool,
     },
-    HeartBeatSent{
-        leader_id: usize, 
+    HeartBeatSent {
+        leader_id: usize,
         current_term: usize,
     },
     TimerExpired,
 }
-

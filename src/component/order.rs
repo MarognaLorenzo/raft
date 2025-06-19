@@ -1,7 +1,5 @@
 pub enum Order {
-    SendInfo{
-        info: usize,
-    },
+    SendInfo { info: usize },
     ConvertToFollower,
     ConvertToCandidate,
     Exit,

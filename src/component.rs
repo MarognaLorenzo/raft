@@ -1,11 +1,11 @@
-use std::{collections::HashMap, };
+use std::collections::HashMap;
 use std::fmt::Debug;
 pub mod consensus_info;
 pub mod order;
 use order::Order;
 pub mod message;
-use message::ServerMessage;
 use crossbeam::channel::*;
+use message::ServerMessage;
 
 use crate::component::consensus_info::ConsensusInfo;
 
@@ -14,24 +14,24 @@ pub struct Initial;
 #[derive(Debug)]
 pub struct Leader;
 #[derive(Debug)]
-pub struct Candidate{
+pub struct Candidate {
     voting_received: usize,
 }
 #[derive(Debug)]
-pub struct Follower{
+pub struct Follower {
     leader: usize,
 }
 
-pub trait ServerT: Debug{
-    fn handle_server_message(self: Box<Self>, _message: ServerMessage) -> Box<dyn ServerT>{
+pub trait ServerT: Debug {
+    fn handle_server_message(self: Box<Self>, _message: ServerMessage) -> Box<dyn ServerT> {
         panic!("I should be implemented!")
     }
 
-    fn handle_order(self: Box<Self>, _order: Order) -> (bool, Box<dyn ServerT>){
+    fn handle_order(self: Box<Self>, _order: Order) -> (bool, Box<dyn ServerT>) {
         panic!("I should be implemented!")
     }
 }
-pub trait StateT{}
+pub trait StateT {}
 
 impl StateT for Initial {}
 impl StateT for Leader {}
@@ -49,10 +49,8 @@ pub struct Server<S: StateT> {
     info: ConsensusInfo,
 }
 
-
-mod initial;
 mod candidate;
-mod leader;
-mod follower;
 mod common;
-
+mod follower;
+mod initial;
+mod leader;
