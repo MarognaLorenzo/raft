@@ -1,12 +1,11 @@
 mod component;
-use component::{Server, Leader, Follower, Candidate, Initial};
 use component::*;
 use component::message::ServerMessage;
 use std::collections::HashMap;
 use std::time::Duration;
-use std::{str, thread, usize, vec};
-use std::io::{self, Write};
+use std::{thread, usize, vec};
 use crossbeam::channel::*;
+use std::io::{self, Write};
 
 use crate::component::order::Order;
 
@@ -59,10 +58,11 @@ fn main() {
         tx.send(order).unwrap();
     });
 
-    thread::sleep(Duration::from_secs(5));
+    thread::sleep(Duration::from_secs(3));
 
     println!();
     println!("Exiting from everyone!");
+    wait_for_user();
     controllers.iter().for_each(|tx| tx.send(Order::Exit).unwrap());
 
     // TODO - :
@@ -89,15 +89,15 @@ pub fn initialize_servers(n_servers: usize) -> (Vec<Server<Initial>>, Vec<Sender
     let names: Vec<usize> = (0usize..n_servers).collect();
     let mut servers:Vec<Server<Initial>>= names.iter()
         .map(|&name| {
-            let (sender, receiver) = crossbeam::channel::unbounded();
-            senders.push(sender);
-            let (world_sender, world_receiver) = unbounded();
-            controllers.push(world_sender);
+            let (server_message_sender, server_message_receiver) = crossbeam::channel::unbounded();
+            let (controller, controller_receiver) = unbounded();
+            senders.push(server_message_sender);
+            controllers.push(controller);
             Server::<Initial>::new(
                 name,
                 n_servers,
-                world_receiver,
-                receiver,
+                controller_receiver,
+                server_message_receiver,
                 HashMap::<usize, Sender<ServerMessage>>::new()
                 )
         })
@@ -107,15 +107,20 @@ pub fn initialize_servers(n_servers: usize) -> (Vec<Server<Initial>>, Vec<Sender
 
     for (i, sender) in senders.iter().enumerate() {
         for (j, server) in servers.iter_mut().enumerate() {
-            if i != j {
-                let send= sender.clone();
-                 server.add_sender(i, send);
-            }
+            let send= sender.clone();
+            server.add_sender(i, send);
         }
     }
     println!("Neighbours: {:?}", servers[0].neighbours);
     println!("Senders size: {}", servers[0].neighbours_len());
 
-    
+
     return (servers, controllers);
+}
+
+fn wait_for_user() {
+    print!("Press Enter to proceed...");
+    io::stdout().flush().unwrap(); // Make sure the prompt is printed immediately
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap();
 }

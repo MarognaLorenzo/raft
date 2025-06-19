@@ -1,4 +1,6 @@
-use crossbeam::channel::{select_biased, Receiver};
+
+
+use crossbeam::channel::{select_biased, Receiver, SendError};
 
 use crate::component::{message::ServerMessage, order::Order, ServerT, StateT};
 
@@ -9,7 +11,7 @@ impl <T: StateT> Server <T> {
         self.neighbours.len()
     }
 
-    pub fn send_message(&self, message: ServerMessage, neighbour: usize)-> Result<(), crossbeam::channel::SendError<ServerMessage>> {
+    pub fn send_message(&self, message: ServerMessage, neighbour: usize)-> Result<(), SendError<ServerMessage>> {
         self.neighbours[&neighbour].send(message)
     }
 
@@ -33,6 +35,11 @@ where
         let mut boxed: Box<dyn ServerT> = Box::new(self);
         loop {
             select_biased!(
+                recv(message_receiver) -> mes => {
+                    println!("ciao from me network {:?}!", boxed);
+                    let next = boxed.handle_server_message(mes.unwrap());
+                    boxed = next;
+                }
                 recv(order_receiver) -> mes => {
                     println!("ciao from me command {:?}!", boxed);
                     let (stop, next) = boxed.handle_order(mes.unwrap());
@@ -40,11 +47,6 @@ where
                     if stop {
                         break;
                     }
-                }
-                recv(message_receiver) -> mes => {
-                    println!("ciao from me network {:?}!", boxed);
-                    let next = boxed.handle_server_message(mes.unwrap());
-                    boxed = next;
                 }
             )
         }

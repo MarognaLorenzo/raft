@@ -1,4 +1,11 @@
-use crate::component::{order::Order, ServerT, };
+use std::thread;
+use std::time::Duration;
+
+use crossbeam::channel::{self, Receiver, Sender};
+use crossbeam::channel::unbounded;
+use crossbeam::select;
+
+use crate::component::{message::ServerMessage, order::Order, ServerT };
 
 use super::{Server, Candidate, Leader, Follower};
 impl Server<Candidate> {
@@ -7,7 +14,7 @@ impl Server<Candidate> {
         for neigh in self.neighbours.values() {
          neigh.send(super::message::ServerMessage::VoteRequest { 
                 candidate_id: self.name, 
-                candidate_term: self.term, 
+                candidate_term: self.info.current_term, 
                 log_length: 0, 
                 last_term: 0 
             }).unwrap();
@@ -19,13 +26,11 @@ impl Server<Candidate> {
         Server{
             _state: std::marker::PhantomData,
             name: self.name, 
-            log: self.log,
             total_elements: self.total_elements,
             message_rx: self.message_rx,
             order_rx: self.order_rx,
             neighbours: self.neighbours,
-            term: self.term,
-            voted_for: self.voted_for,
+            info: self.info,
         }
     }
 
@@ -33,34 +38,47 @@ impl Server<Candidate> {
         Server{
             _state: std::marker::PhantomData,
             name: self.name, 
-            log: self.log,
             total_elements: self.total_elements,
             message_rx: self.message_rx,
             order_rx: self.order_rx,
             neighbours: self.neighbours,
-            term: self.term,
-            voted_for: self.voted_for,
+            info: self.info
         }
    }
 
-    pub fn drop(self) -> Server<Follower> {
-        println!("Oh no your dropping me!");
-        Server{
-            _state: std::marker::PhantomData,
-            name: self.name,
-            log: self.log,
-            total_elements: self.total_elements,
-            order_rx: self.order_rx,
-            message_rx: self.message_rx,
-            neighbours: self.neighbours,
-            term: self.term,
-            voted_for: self.voted_for,
+   fn spawn_timer(stop_recv: Receiver<()>, expiration_tx: Sender<ServerMessage>){
+        thread::spawn(move ||{
+            select! {
+                recv(stop_recv) -> _ => {
+                    // timer cancelled
+                    return;
+                }
+                default(Duration::from_secs(3)) => {
+                    //timeout elapsed
+                    expiration_tx.send(
+                        ServerMessage::TimerExpired
+                        ).unwrap();
+                }
+            }
+        });
+   }
+   fn on_heartbeat_received(&mut self, leader_id: usize, current_term: usize){
+        if let Some(old_timer) = self.info.old_timer_tx.take() {
+            old_timer.send(()).unwrap();
         }
-    }
+       let (stop_timer_tx, stop_timer_rx) = unbounded::<()>();
+       self.info.old_timer_tx = Some(stop_timer_tx);
+
+       Self::spawn_timer(stop_timer_rx, self.neighbours[&self.name].clone());
+   }
 }
 
 impl ServerT for Server<Candidate>{
-    fn handle_server_message(self: Box<Self>, message: super::message::ServerMessage) -> Box<dyn ServerT> {
+    fn handle_server_message(mut self: Box<Self>, message: super::message::ServerMessage) -> Box<dyn ServerT> {
+        match message {
+            ServerMessage::HeartBeatSent { leader_id, current_term } => self.on_heartbeat_received(leader_id, current_term),
+            _ => {},
+        };
         Box::new(*self)
     }
 

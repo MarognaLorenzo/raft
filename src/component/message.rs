@@ -14,6 +14,11 @@ pub enum ServerMessage {
         responser_id: usize,
         current_term: usize,
         response: bool,
-    }
+    },
+    HeartBeatSent{
+        leader_id: usize, 
+        current_term: usize,
+    },
+    TimerExpired,
 }
 
