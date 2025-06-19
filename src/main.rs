@@ -32,15 +32,35 @@ fn main() {
                 }
                 let received_message = server.open_message(); 
                 println!("I ({}) received a message! {:?}",server.get_name(), received_message);
-                thread::sleep(Duration::from_secs(5));
+                thread::sleep(Duration::from_secs(1));
                 server.activate();
-
-                
-
-                // server.
             })
         }).collect();
+
     controllers.iter().for_each(|tx| tx.send(Order::SendInfo { info: 10 }).unwrap());
+
+    thread::sleep(Duration::from_secs(3));
+
+    println!();
+    println!("Starting changing states");
+
+
+    controllers.iter().enumerate().for_each(|(i, tx)| {
+        let order:Order;
+        if i%2 == 0 {
+            order = Order::ConvertToFollower;
+        } else {
+            order = Order::SendInfo { info: i }
+        }
+        tx.send(order).unwrap();
+    });
+
+    thread::sleep(Duration::from_secs(5));
+
+    println!();
+    println!("Exiting from everyone!");
+    controllers.iter().for_each(|tx| tx.send(Order::Exit).unwrap());
+
     // TODO - :
     // * Get receiver from the world and receiver from private network
     // * Do a select loop in which you see which receiver has messages and then handle the

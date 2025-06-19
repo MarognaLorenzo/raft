@@ -29,6 +29,20 @@ impl Server<Candidate> {
         }
     }
 
+   pub fn to_follower(self) -> Server<Follower> {
+        Server{
+            _state: std::marker::PhantomData,
+            name: self.name, 
+            log: self.log,
+            total_elements: self.total_elements,
+            message_rx: self.message_rx,
+            order_rx: self.order_rx,
+            neighbours: self.neighbours,
+            term: self.term,
+            voted_for: self.voted_for,
+        }
+   }
+
     pub fn drop(self) -> Server<Follower> {
         println!("Oh no your dropping me!");
         Server{
@@ -51,7 +65,15 @@ impl ServerT for Server<Candidate>{
     }
 
     fn handle_order(self: Box<Self>, order: Order) -> (bool, Box<dyn ServerT>) {
-        return (true, Box::new(*self))
+        match order {
+        Order::SendInfo { info } => {
+            println!("I am candidate {} and I received info {}", self.name, info);
+            (false, Box::new(*self))
+        }
+        Order::Exit => (true, Box::new(*self)),
+        Order::ConvertToFollower => (false, Box::new((*self).to_follower())),
+        Order::ConvertToCandidate => (false, Box::new(*self)),
+        }
     }
     /* fn handle_order(&self, order: super::order::Order) -> bool {
         match order {

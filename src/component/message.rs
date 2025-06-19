@@ -1,6 +1,5 @@
 #[derive(Debug)]
 pub enum ServerMessage {
-
     Ping{
         from: usize, 
         to: usize,
