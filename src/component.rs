@@ -15,6 +15,15 @@ pub struct Follower{
     leader: usize,
 }
 
+pub trait ComponentTrait {
+    fn handle_component_message(&self, message: ComponentMessage) {
+        panic!("I should be implemented!")
+    }
+
+    fn handle_order(&self, order: super::order::Order) -> bool{
+        panic!("I should be implemented!")
+    }
+}
 pub trait StateTrait{}
 
 impl StateTrait for Initial {}

@@ -1,3 +1,5 @@
+use crate::component::{order::Order, ComponentTrait};
+
 use super::{Component, Candidate, Leader, Follower};
 impl Component<Candidate> {
     
@@ -39,6 +41,17 @@ impl Component<Candidate> {
             neighbours: self.neighbours,
             term: self.term,
             voted_for: self.voted_for,
+        }
+    }
+}
+
+impl ComponentTrait for Component<Candidate>{
+    fn handle_order(&self, order: super::order::Order) -> bool {
+        match order {
+            Order::SendInfo { info } => {
+                println!("Received: {}", info);
+                true
+            }
         }
     }
 }

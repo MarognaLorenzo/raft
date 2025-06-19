@@ -1,7 +1,9 @@
 mod component;
 use component::{Component, Leader, Follower, Candidate, Initial};
+use component::*;
 use component::message::ComponentMessage;
 use std::collections::HashMap;
+use std::time::Duration;
 use std::{str, thread, usize, vec};
 use std::io::{self, Write};
 use crossbeam::channel::*;
@@ -30,13 +32,15 @@ fn main() {
                 }
                 let received_message = server.open_message(); 
                 println!("I ({}) received a message! {:?}",server.get_name(), received_message);
+                thread::sleep(Duration::from_secs(5));
+                server.activate();
 
-
-
+                
 
                 // server.
             })
         }).collect();
+    controllers.iter().for_each(|tx| tx.send(Order::SendInfo { info: 10 }).unwrap());
     // TODO - :
     // * Get receiver from the world and receiver from private network
     // * Do a select loop in which you see which receiver has messages and then handle the
