@@ -13,13 +13,15 @@ fn main() {
     let n_servers = 5usize;
     let (servers, controllers) = initialize_servers(n_servers);
 
-    let servers: Vec<Server<Candidate>> = servers.into_iter().map(|ser| ser.completed()).collect();
+    let servers: Vec<Server<Follower>> = servers.into_iter().map(|ser| ser.completed()).collect();
     // println!("Server 0 amount of neighbours: {}", servers[0].neighbours_len());
 
     let handles: Vec<_> = servers
         .into_iter()
         .map(|server| {
-            std::thread::spawn(move || {
+            let mut thread_name = "Server-".to_string();
+            thread_name.push_str(server.get_name().to_string().as_str());
+            thread::Builder::new().name(thread_name).spawn(move || {
                 let from = server.get_name();
                 let to = (from + 1) % n_servers;
                 let builded_message: ServerMessage = ServerMessage::Ping { from: from, to: to };
@@ -32,12 +34,19 @@ fn main() {
                     server.get_name(),
                     received_message
                 );
+                if server.get_name() == 0 {
+                    server
+                        .get_self_sender()
+                        .send(ServerMessage::TimerExpired)
+                        .unwrap();
+                }
                 server.activate();
             })
         })
-        .collect();
+    .collect();
 
     thread::sleep(Duration::from_secs(3));
+    wait_for_user();
 
     println!();
     println!("Sending INFO!");
@@ -48,18 +57,18 @@ fn main() {
 
     thread::sleep(Duration::from_secs(3));
 
-    println!();
-    println!("Starting changing states");
-
-    controllers.iter().enumerate().for_each(|(i, tx)| {
-        let order: Order;
-        if i % 2 == 0 {
-            order = Order::ConvertToFollower;
-        } else {
-            order = Order::SendInfo { info: i }
-        }
-        tx.send(order).unwrap();
-    });
+    // println!();
+    // println!("Starting changing states");
+    //
+    // controllers.iter().enumerate().for_each(|(i, tx)| {
+    //     let order: Order;
+    //     if i % 2 == 0 {
+    //         order = Order::ConvertToFollower;
+    //     } else {
+    //         order = Order::SendInfo { info: i }
+    //     }
+    //     tx.send(order).unwrap();
+    // });
 
     thread::sleep(Duration::from_secs(3));
 
@@ -70,15 +79,8 @@ fn main() {
         .iter()
         .for_each(|tx| tx.send(Order::Exit).unwrap());
 
-    // TODO - :
-    // * Get receiver from the world and receiver from private network
-    // * Do a select loop in which you see which receiver has messages and then handle the
-    // message
-    // * Set up a return mechanism in the loop for handling the message so that we can exit
-    // from this thing.
-
     for handle in handles {
-        handle.join().unwrap();
+        // handle.join().unwrap();
     }
 
     println!("DONE");
@@ -121,7 +123,9 @@ pub fn initialize_servers(n_servers: usize) -> (Vec<Server<Initial>>, Vec<Sender
 }
 
 fn wait_for_user() {
+    println!();
     print!("Press Enter to proceed...");
+    println!();
     io::stdout().flush().unwrap(); // Make sure the prompt is printed immediately
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();

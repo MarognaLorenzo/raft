@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::Component;
 use std::thread;
 use std::time::Duration;
@@ -6,6 +7,7 @@ use crossbeam::channel::unbounded;
 use crossbeam::channel::{self, Receiver, Sender};
 use crossbeam::select;
 
+use crate::component::consensus_info::LogEntry;
 use crate::component::StateT;
 use crate::component::{common, message::ServerMessage, order::Order, ServerT};
 
@@ -51,10 +53,34 @@ impl Server<Candidate> {
         if let Some(old_timer) = self.info.old_timer_tx.take() {
             old_timer.send(()).unwrap();
         }
-        let stop_timer_tx = Self::spawn_timer(self.get_self_sender().clone());
+        let stop_timer_tx = Self::spawn_timer(self.get_self_sender().clone(), 20);
         self.info.old_timer_tx = Some(stop_timer_tx);
 
         Box::new(self)
+    }
+
+    fn on_log_request_received(
+        mut self,
+        leader_id: usize,
+        leader_term: usize,
+        prefix_len: usize,
+        prefix_term: usize,
+        leader_commit: usize,
+        suffix: Vec<LogEntry>,
+    ) -> Box<dyn ServerT> {
+        let change_to_follower = self.handle_log_request(
+            leader_id,
+            leader_term,
+            prefix_len,
+            prefix_term,
+            leader_commit,
+            suffix,
+        );
+        if change_to_follower {
+            Box::new(self.to_follower())
+        } else {
+            Box::new(self)
+        }
     }
 
     fn on_timer_expired(mut self) -> Box<dyn ServerT> {
@@ -109,13 +135,21 @@ impl Server<Candidate> {
             let quorum = (self.total_elements + 1).div_ceil(2) as usize;
             if self.info.votes_received.len() >= quorum {
                 self.info.current_leader = self.name;
-                self.neighbours.iter().for_each(|(&follower, _)| {
-                    if follower == self.name {
-                        return;
-                    }
+                let neigh: Vec<_> = self
+                    .neighbours
+                    .keys()
+                    .filter(|(&&follower)| follower != self.name)
+                    .copied()
+                    .collect();
+                println!(
+                    "\n {} got elected to leader {:?}",
+                    self.name, self.info.votes_received
+                );
+                neigh.iter().for_each(|&follower| {
                     self.info.sent_length.insert(follower, self.info.log.len());
                     self.info.acked_length.insert(follower, 0);
-                    // TODO Replicate log
+                    self.replicate_log(self.name, follower);
+                    println!("{} Sent log to {}", self.name, follower);
                 });
                 Box::new(self.to_leader())
             } else {
@@ -140,6 +174,21 @@ impl ServerT for Server<Candidate> {
         message: super::message::ServerMessage,
     ) -> Box<dyn ServerT> {
         match message {
+            ServerMessage::LogRequest {
+                leader_id,
+                current_term,
+                prefix_len,
+                prefix_term,
+                commit_length,
+                suffix,
+            } => self.on_log_request_received(
+                leader_id,
+                current_term,
+                prefix_len,
+                prefix_term,
+                commit_length,
+                suffix,
+            ),
             ServerMessage::HeartBeatSent {
                 leader_id,
                 current_term,
@@ -151,10 +200,10 @@ impl ServerT for Server<Candidate> {
                 log_length,
                 last_term,
             } => self.on_vote_request(candidate_id, candidate_term, log_length, last_term),
-            ServerMessage::VoteResponse { 
-                responser_id, 
+            ServerMessage::VoteResponse {
+                responser_id,
                 responder_term,
-                response 
+                response,
             } => self.on_vote_receive(responser_id, responder_term, response),
             _ => Box::new(*self),
         }
@@ -163,9 +212,9 @@ impl ServerT for Server<Candidate> {
     fn handle_order(self: Box<Self>, order: Order) -> (bool, Box<dyn ServerT>) {
         match order {
             Order::SendInfo { info } => {
-                println!("I am candidate {} and I received info {}", self.name, info);
+                // println!("I am candidate {} and I received info {}", self.name, info);
                 (false, Box::new(*self))
-            },
+            }
             Order::Exit => (true, Box::new(*self)),
             Order::ConvertToFollower => (false, Box::new((*self).to_follower())),
             Order::ConvertToCandidate => (false, Box::new(*self)),

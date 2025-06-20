@@ -1,6 +1,6 @@
 use crate::component::consensus_info::ConsensusInfo;
 use crate::component::{message::ServerMessage, order::Order};
-use crate::component::{Candidate, ServerT};
+use crate::component::{Candidate, Follower, ServerT};
 
 use super::{Initial, Server};
 use crossbeam::channel::*;
@@ -29,7 +29,7 @@ impl Server<Initial> {
         self.neighbours.insert(name, sender);
     }
 
-    pub fn completed(self) -> Server<Candidate> {
+    pub fn completed(self) -> Server<Follower> {
         let component = Server {
             _state: std::marker::PhantomData,
             name: self.name,

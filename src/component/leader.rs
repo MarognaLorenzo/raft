@@ -15,12 +15,7 @@ impl Server<Leader> {
         }
     }
 
-    fn on_vote_receive(
-        mut self,
-        _: usize,
-        responder_term: usize,
-        _: bool,
-    ) -> Box<dyn ServerT> {
+    fn on_vote_receive(mut self, _: usize, responder_term: usize, _: bool) -> Box<dyn ServerT> {
         if responder_term > self.info.current_term {
             self.info.current_term = responder_term;
             self.info.voted_for = None;
@@ -50,23 +45,18 @@ impl Server<Leader> {
             Box::new(self)
         }
     }
-
 }
-
 
 impl ServerT for Server<Leader> {
     fn handle_order(self: Box<Self>, order: Order) -> (bool, Box<dyn ServerT>) {
         (true, Box::new(*self))
     }
-    fn handle_server_message(
-        self: Box<Self>,
-        message: ServerMessage,
-    ) -> Box<dyn ServerT> {
+    fn handle_server_message(self: Box<Self>, message: ServerMessage) -> Box<dyn ServerT> {
         match message {
             ServerMessage::VoteResponse {
                 responser_id,
                 responder_term,
-                response 
+                response,
             } => self.on_vote_receive(responser_id, responder_term, response),
             ServerMessage::VoteRequest {
                 candidate_id,
@@ -74,7 +64,7 @@ impl ServerT for Server<Leader> {
                 log_length,
                 last_term,
             } => self.on_vote_request(candidate_id, candidate_term, log_length, last_term),
-            _ => Box::new(*self)
+            _ => Box::new(*self),
         }
     }
 }

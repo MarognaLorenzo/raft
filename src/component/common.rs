@@ -1,11 +1,14 @@
-use std::{collections::HashMap, thread, time::Duration};
+use rand::Rng;
+use std::{fmt, thread, time::Duration};
 
 use crossbeam::{
-    channel::{select_biased, unbounded, Receiver, SendError, Sender},
+    channel::{select_biased, unbounded, SendError, Sender},
     select,
 };
 
-use crate::component::{message::ServerMessage, order::Order, ServerT, StateT};
+use crate::component::{
+    consensus_info::LogEntry, message::ServerMessage, order::Order, ServerT, StateT,
+};
 
 use super::Server;
 
@@ -40,15 +43,16 @@ impl<T: StateT> Server<T> {
             .filter(|(&k, _)| k != self.name)
             .for_each(func);
     }
-    pub fn spawn_timer(expiration_tx: Sender<ServerMessage>) -> Sender<()> {
+    pub fn spawn_timer(expiration_tx: Sender<ServerMessage>, time: usize) -> Sender<()> {
+        // println!("I need to spawn a thread!");
         let (stop_send, stop_recv) = unbounded();
-        thread::spawn(move || {
+        let h = thread::Builder::new().name("Timer".to_string()).spawn(move || {
             select! {
                 recv(stop_recv) -> _ => {
                     // timer cancelled
                     return;
                 }
-                default(Duration::from_secs(3)) => {
+                default(Duration::from_secs(time as u64)) => {
                     //timeout elapsed
                     expiration_tx.send(
                         ServerMessage::TimerExpired
@@ -56,6 +60,7 @@ impl<T: StateT> Server<T> {
                 }
             }
         });
+        // println!("Thread spawned! {:?}", h);
         return stop_send;
     }
 
@@ -75,22 +80,117 @@ impl<T: StateT> Server<T> {
             Some(entry) => entry.term,
             None => 0,
         };
-        let logOk: bool = (candidate_log_term > last_term)
-            || (candidate_log_term == last_term && candidate_log_length > self.info.log.len());
+        let log_ok: bool = (candidate_log_term > last_term)
+            || (candidate_log_term == last_term && candidate_log_length >= self.info.log.len());
         let voted_ok: bool = self
             .info
             .voted_for
             .is_none_or(|voted| voted == candidate_id);
-        let answer: bool = candidate_term == self.info.current_term && logOk && voted_ok;
+        let answer: bool = candidate_term == self.info.current_term && log_ok && voted_ok;
+        if answer {
+            self.info.voted_for = Some(candidate_id);
+        }
         let accepted_request = ServerMessage::VoteResponse {
             responser_id: self.name,
             responder_term: self.info.current_term,
             response: answer,
         };
+        if !answer {
+            println!(
+                "{} answered no to {}. (term {}) (logOk {}) (voted_ok {}) - voted => {:?}",
+                self.name,
+                candidate_id,
+                self.info.current_term == candidate_term,
+                log_ok,
+                voted_ok,
+                self.info.voted_for
+            );
+        } else {
+            println!("{} answered yes to {}", self.name, candidate_id);
+        }
         self.send_message(accepted_request, candidate_id).unwrap();
 
         //return true if the server needs to turn into follower mode
         return received_newer_term;
+    }
+
+    pub fn handle_log_request(
+        &mut self,
+        leader_id: usize,
+        leader_term: usize,
+        prefix_len: usize,
+        prefix_term: usize,
+        leader_commit: usize,
+        suffix: Vec<LogEntry>,
+    ) -> bool {
+        // Change to return true if need to change to follower ->
+        // let mut
+        println!("{} received a log request from term {} and is in term {}", self.name, leader_term, self.info.current_term);
+        if leader_term > self.info.current_term {
+            self.info.current_term = leader_term;
+            self.info.voted_for = None;
+        }
+
+        // return true if I want to go into follower state:
+        let equal_term: bool = leader_term == self.info.current_term;
+        if equal_term {
+            self.info.current_leader = leader_id;
+
+            // cancel election timer
+            if let Some(old_timer) = self.info.old_timer_tx.take() {
+                old_timer.send(()).unwrap();
+            }
+            let stop_timer_tx = Self::spawn_timer(self.get_self_sender().clone(), 20);
+            self.info.old_timer_tx = Some(stop_timer_tx);
+        }
+
+        let log_ok: bool = prefix_len == 0
+            || self
+            .info
+            .log
+            .get(prefix_len - 1)
+            .is_some_and(|entry| entry.term == prefix_term);
+        let answer: bool = leader_term == self.info.current_leader && log_ok;
+        let message = if answer {
+            // TODO APPENDENTRIES
+            let ack = prefix_len + suffix.len();
+            ServerMessage::LogResponse {
+                responder_id: self.name,
+                responder_term: self.info.current_term,
+                ack: ack,
+                answer: true,
+            }
+            //do stuff
+        } else {
+            ServerMessage::LogResponse {
+                responder_id: self.name,
+                responder_term: self.info.current_term,
+                ack: 0,
+                answer: false,
+            }
+        };
+
+        self.send_message(message, leader_id).unwrap();
+        return equal_term;
+    }
+
+    pub fn replicate_log(&self, leader_id: usize, follower_id: usize) {
+        let prefix_len = self.info.sent_length[&follower_id];
+        // TODO generate the suffix from prefix to the end!
+        let suffix: Vec<LogEntry> = self.info.log[prefix_len..].to_vec();
+        let prefix_term = match self.info.log.last() {
+            Some(entry) => entry.term,
+            None => 0,
+        };
+        let message = ServerMessage::LogRequest {
+            leader_id: leader_id,
+            current_term: self.info.current_term,
+            prefix_len: prefix_len,
+            prefix_term: prefix_term,
+            commit_length: self.info.commit_length,
+            suffix: suffix,
+        };
+        self.send_message(message, follower_id).unwrap();
     }
 }
 
@@ -103,20 +203,25 @@ where
         let order_receiver = self.order_rx.clone();
         let message_receiver = self.message_rx.clone();
 
-        let timer_sender = Self::spawn_timer(self.get_self_sender().clone());
-        self.info.old_timer_tx = Some(timer_sender);
+        let micros = rand::thread_rng().gen_range(50..400);
+        thread::sleep(Duration::from_micros(micros));
+
+        // let timer_sender = Self::spawn_timer(self.get_self_sender().clone(), 0);
+        // self.info.old_timer_tx = Some(timer_sender);
 
         let mut boxed: Box<dyn ServerT> = Box::new(self);
         loop {
             select_biased!(
                 recv(message_receiver) -> mes => {
-                    println!("ciao from me network {:?}!", boxed);
-                    let next = boxed.handle_server_message(mes.unwrap());
+                    let message = mes.unwrap();
+                    println!("network - {} received {:?}", boxed, message);
+                    let next = boxed.handle_server_message(message);
                     boxed = next;
                 }
                 recv(order_receiver) -> mes => {
-                    println!("ciao from me command {:?}!", boxed);
-                    let (stop, next) = boxed.handle_order(mes.unwrap());
+                    let message = mes.unwrap();
+                    println!("command - {} received {:?}", boxed, message);
+                    let (stop, next) = boxed.handle_order(message);
                     boxed = next;
                     if stop {
                         break;
@@ -124,5 +229,12 @@ where
                 }
             )
         }
+    }
+}
+
+impl<T: StateT> fmt::Display for Server<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Write to the formatter using `write!` macro
+        write!(f, "({}, {:?})", self.name, self._state)
     }
 }

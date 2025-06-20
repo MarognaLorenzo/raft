@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 pub mod consensus_info;
 pub mod order;
 use order::Order;
@@ -22,7 +22,7 @@ pub struct Follower {
     leader: usize,
 }
 
-pub trait ServerT: Debug {
+pub trait ServerT: Debug + Display {
     fn handle_server_message(self: Box<Self>, _message: ServerMessage) -> Box<dyn ServerT> {
         panic!("I should be implemented!")
     }
