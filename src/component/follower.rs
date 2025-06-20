@@ -19,7 +19,7 @@ impl Server<Follower> {
             old_timer.send(()).unwrap();
         }
 
-        let stop_timer_tx = Self::spawn_timer(self.get_self_sender().clone(), 20);
+        let stop_timer_tx = Self::spawn_timer(self.get_self_sender().clone(), 10);
         self.info.old_timer_tx = Some(stop_timer_tx);
         Box::new(self)
     }
@@ -40,6 +40,11 @@ impl Server<Follower> {
             log_length: self.info.log.len(),
             last_term: last_term,
         };
+
+
+        println!("{} is spawning a timer", self.name);
+        let stop_timer_tx = Self::spawn_timer(self.get_self_sender().clone(), 10);
+        self.info.old_timer_tx = Some(stop_timer_tx);
 
         self.broadcast(|(_, transmitter)| transmitter.send(message.clone()).unwrap());
         Box::new(self.to_candidate())

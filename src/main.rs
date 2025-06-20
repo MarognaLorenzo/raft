@@ -10,7 +10,7 @@ use std::{thread, usize};
 use crate::component::order::Order;
 
 fn main() {
-    let n_servers = 5usize;
+    let n_servers = 15usize;
     let (servers, controllers) = initialize_servers(n_servers);
 
     let servers: Vec<Server<Follower>> = servers.into_iter().map(|ser| ser.completed()).collect();

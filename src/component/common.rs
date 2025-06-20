@@ -138,9 +138,9 @@ impl<T: StateT> Server<T> {
 
             // cancel election timer
             if let Some(old_timer) = self.info.old_timer_tx.take() {
-                old_timer.send(()).unwrap();
+                old_timer.send(()).unwrap_or_default();
             }
-            let stop_timer_tx = Self::spawn_timer(self.get_self_sender().clone(), 20);
+            let stop_timer_tx = Self::spawn_timer(self.get_self_sender().clone(), 10);
             self.info.old_timer_tx = Some(stop_timer_tx);
         }
 
