@@ -43,27 +43,30 @@ impl<T: StateT> Server<T> {
             .filter(|(&k, _)| k != self.name)
             .for_each(func);
     }
-    pub fn spawn_timer(expiration_tx: Sender<ServerMessage>, time: usize) -> Sender<()> {
-        // println!("I need to spawn a thread!");
+
+    pub fn update_timer(&mut self, message: ServerMessage, time: Option<usize>){
+        // cancel election timer
+        if let Some(old_timer) = self.info.old_timer_tx.take() {
+            old_timer.send(()).unwrap_or_default();
+        }
+
         let (stop_send, stop_recv) = unbounded();
+        self.info.old_timer_tx = Some(stop_send);
+        let sender = self.get_self_sender().clone();
         let h = thread::Builder::new().name("Timer".to_string()).spawn(move || {
             select! {
                 recv(stop_recv) -> _ => {
                     // timer cancelled
                     return;
                 }
-                default(Duration::from_secs(time as u64)) => {
+                default(Duration::from_secs(time.unwrap_or(10) as u64)) => {
                     //timeout elapsed
-                    expiration_tx.send(
-                        ServerMessage::TimerExpired
-                    ).unwrap();
+                    sender.send(message).unwrap();
                 }
             }
         });
-        // println!("Thread spawned! {:?}", h);
-        return stop_send;
-    }
 
+    }
     pub fn handle_vote_request(
         &mut self,
         candidate_id: usize,
@@ -135,13 +138,7 @@ impl<T: StateT> Server<T> {
         let equal_term: bool = leader_term == self.info.current_term;
         if equal_term {
             self.info.current_leader = leader_id;
-
-            // cancel election timer
-            if let Some(old_timer) = self.info.old_timer_tx.take() {
-                old_timer.send(()).unwrap_or_default();
-            }
-            let stop_timer_tx = Self::spawn_timer(self.get_self_sender().clone(), 10);
-            self.info.old_timer_tx = Some(stop_timer_tx);
+            self.update_timer(ServerMessage::TimerExpired, Some(10));
         }
 
         let log_ok: bool = prefix_len == 0
@@ -205,9 +202,6 @@ where
 
         let micros = rand::thread_rng().gen_range(50..400);
         thread::sleep(Duration::from_micros(micros));
-
-        // let timer_sender = Self::spawn_timer(self.get_self_sender().clone(), 0);
-        // self.info.old_timer_tx = Some(timer_sender);
 
         let mut boxed: Box<dyn ServerT> = Box::new(self);
         loop {

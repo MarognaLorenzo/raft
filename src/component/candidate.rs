@@ -50,12 +50,7 @@ impl Server<Candidate> {
     }
 
     fn on_heartbeat_received(mut self, leader_id: usize, current_term: usize) -> Box<dyn ServerT> {
-        if let Some(old_timer) = self.info.old_timer_tx.take() {
-            old_timer.send(()).unwrap();
-        }
-        let stop_timer_tx = Self::spawn_timer(self.get_self_sender().clone(), 10);
-        self.info.old_timer_tx = Some(stop_timer_tx);
-
+        self.update_timer(ServerMessage::TimerExpired, Some(10));
         Box::new(self)
     }
 
@@ -102,8 +97,7 @@ impl Server<Candidate> {
 
 
         println!("{} is spawning a timer", self.name);
-        let stop_timer_tx = Self::spawn_timer(self.get_self_sender().clone(), 10);
-        self.info.old_timer_tx = Some(stop_timer_tx);
+        self.update_timer(ServerMessage::TimerExpired, Some(10));
 
         self.broadcast(|(_, transmitter)| transmitter.send(message.clone()).unwrap());
         Box::new(self)
