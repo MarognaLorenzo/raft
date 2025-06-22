@@ -19,7 +19,7 @@ impl Server<Leader> {
         if responder_term > self.info.current_term {
             self.info.current_term = responder_term;
             self.info.voted_for = None;
-            // TODO check eventually cancel election timer
+            self.update_timer(ServerMessage::TimerExpired, Some(10));
             Box::new(self.to_follower())
         } else {
             Box::new(self)
@@ -45,6 +45,21 @@ impl Server<Leader> {
             Box::new(self)
         }
     }
+
+    fn on_send_heartbeat(mut self) -> Box<dyn ServerT> {
+        self.update_timer(ServerMessage::SendHeartBeat, Some(2));
+        todo!("Change this message");
+        let message = ServerMessage::LogRequest {
+            leader_id: self.name,
+            current_term: self.info.current_term,
+            prefix_len: self.info.current_term,
+            prefix_term: self.info.current_term,
+            commit_length: 2,
+            suffix: vec![],
+        };
+        self.broadcast(|(_, tx)| tx.send(ServerMessage::TimerExpired).unwrap());
+        Box::new(self)
+    }
 }
 
 impl ServerT for Server<Leader> {
@@ -64,6 +79,7 @@ impl ServerT for Server<Leader> {
                 log_length,
                 last_term,
             } => self.on_vote_request(candidate_id, candidate_term, log_length, last_term),
+            ServerMessage::SendHeartBeat => self.on_send_heartbeat(),
             _ => Box::new(*self),
         }
     }

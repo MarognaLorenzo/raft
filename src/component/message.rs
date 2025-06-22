@@ -25,6 +25,8 @@ pub enum ServerMessage {
         current_term: usize,
     },
 
+    SendHeartBeat,
+
     TimerExpired,
 
     LogRequest {

@@ -44,7 +44,7 @@ impl<T: StateT> Server<T> {
             .for_each(func);
     }
 
-    pub fn update_timer(&mut self, message: ServerMessage, time: Option<usize>){
+    pub fn update_timer(&mut self, message: ServerMessage, time: Option<usize>) {
         // cancel election timer
         if let Some(old_timer) = self.info.old_timer_tx.take() {
             old_timer.send(()).unwrap_or_default();
@@ -53,19 +53,20 @@ impl<T: StateT> Server<T> {
         let (stop_send, stop_recv) = unbounded();
         self.info.old_timer_tx = Some(stop_send);
         let sender = self.get_self_sender().clone();
-        let h = thread::Builder::new().name("Timer".to_string()).spawn(move || {
-            select! {
-                recv(stop_recv) -> _ => {
-                    // timer cancelled
-                    return;
+        let h = thread::Builder::new()
+            .name("Timer".to_string())
+            .spawn(move || {
+                select! {
+                    recv(stop_recv) -> _ => {
+                        // timer cancelled
+                        return;
+                    }
+                    default(Duration::from_secs(time.unwrap_or(10) as u64)) => {
+                        //timeout elapsed
+                        sender.send(message).unwrap();
+                    }
                 }
-                default(Duration::from_secs(time.unwrap_or(10) as u64)) => {
-                    //timeout elapsed
-                    sender.send(message).unwrap();
-                }
-            }
-        });
-
+            });
     }
     pub fn handle_vote_request(
         &mut self,
@@ -128,7 +129,10 @@ impl<T: StateT> Server<T> {
     ) -> bool {
         // Change to return true if need to change to follower ->
         // let mut
-        println!("{} received a log request from term {} and is in term {}", self.name, leader_term, self.info.current_term);
+        println!(
+            "{} received a log request from term {} and is in term {}",
+            self.name, leader_term, self.info.current_term
+        );
         if leader_term > self.info.current_term {
             self.info.current_term = leader_term;
             self.info.voted_for = None;
@@ -143,10 +147,10 @@ impl<T: StateT> Server<T> {
 
         let log_ok: bool = prefix_len == 0
             || self
-            .info
-            .log
-            .get(prefix_len - 1)
-            .is_some_and(|entry| entry.term == prefix_term);
+                .info
+                .log
+                .get(prefix_len - 1)
+                .is_some_and(|entry| entry.term == prefix_term);
         let answer: bool = leader_term == self.info.current_leader && log_ok;
         let message = if answer {
             // TODO APPENDENTRIES

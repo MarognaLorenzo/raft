@@ -95,7 +95,6 @@ impl Server<Candidate> {
             last_term: last_term,
         };
 
-
         println!("{} is spawning a timer", self.name);
         self.update_timer(ServerMessage::TimerExpired, Some(10));
 

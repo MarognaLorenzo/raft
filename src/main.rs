@@ -43,7 +43,7 @@ fn main() {
                 server.activate();
             })
         })
-    .collect();
+        .collect();
 
     thread::sleep(Duration::from_secs(3));
     wait_for_user();

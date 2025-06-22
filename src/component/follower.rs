@@ -1,4 +1,6 @@
-use crate::component::{consensus_info::LogEntry, message::ServerMessage, order::Order, Candidate, ServerT};
+use crate::component::{
+    consensus_info::LogEntry, message::ServerMessage, order::Order, Candidate, ServerT,
+};
 use crossbeam::channel::{unbounded, Receiver};
 
 use super::{Follower, Server};
@@ -35,7 +37,6 @@ impl Server<Follower> {
             log_length: self.info.log.len(),
             last_term: last_term,
         };
-
 
         println!("{} is spawning a timer", self.name);
         self.update_timer(ServerMessage::TimerExpired, Some(10));
