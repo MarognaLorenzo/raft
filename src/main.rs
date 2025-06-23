@@ -45,7 +45,13 @@ fn main() {
         })
         .collect();
 
-    thread::sleep(Duration::from_secs(3));
+    wait_for_user();
+    controllers.iter().for_each(|tx| tx.send(Order::Disconnect).unwrap());
+
+
+    wait_for_user();
+    controllers.iter().for_each(|tx| tx.send(Order::Reconnect).unwrap());
+
     wait_for_user();
 
     println!();
@@ -96,13 +102,14 @@ pub fn initialize_servers(n_servers: usize) -> (Vec<Server<Initial>>, Vec<Sender
         .map(|&name| {
             let (server_message_sender, server_message_receiver) = crossbeam::channel::unbounded();
             let (controller, controller_receiver) = unbounded();
-            senders.push(server_message_sender);
+            senders.push(server_message_sender.clone());
             controllers.push(controller);
             Server::<Initial>::new(
                 name,
                 n_servers,
                 controller_receiver,
                 server_message_receiver,
+                server_message_sender,
                 HashMap::<usize, Sender<ServerMessage>>::new(),
             )
         })
@@ -112,8 +119,9 @@ pub fn initialize_servers(n_servers: usize) -> (Vec<Server<Initial>>, Vec<Sender
 
     for (i, sender) in senders.iter().enumerate() {
         for (j, server) in servers.iter_mut().enumerate() {
-            let send = sender.clone();
-            server.add_sender(i, send);
+            if i!=j {
+                server.add_sender(i, sender.clone());
+            }
         }
     }
     println!("Neighbours: {:?}", servers[0].neighbours);

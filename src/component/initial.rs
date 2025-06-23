@@ -1,4 +1,5 @@
 use crate::component::consensus_info::ConsensusInfo;
+use crate::component::server_settings::ServerSettings;
 use crate::component::{message::ServerMessage, order::Order};
 use crate::component::{Candidate, Follower, ServerT};
 
@@ -12,6 +13,7 @@ impl Server<Initial> {
         total_elements: usize,
         command_rx: Receiver<Order>,
         network_rx: Receiver<ServerMessage>,
+        network_tx: Sender<ServerMessage>,
         neighbours: HashMap<usize, Sender<ServerMessage>>,
     ) -> Self {
         Server {
@@ -20,8 +22,10 @@ impl Server<Initial> {
             total_elements,
             order_rx: command_rx,
             message_rx: network_rx,
+            self_transmitter: network_tx,
             neighbours,
             info: ConsensusInfo::new(),
+            settings: ServerSettings::new(),
         }
     }
 
@@ -36,8 +40,10 @@ impl Server<Initial> {
             total_elements: self.total_elements,
             order_rx: self.order_rx,
             message_rx: self.message_rx,
+            self_transmitter: self.self_transmitter,
             neighbours: self.neighbours,
             info: self.info,
+            settings: self.settings,
         };
         // component.candidate();
         return component;

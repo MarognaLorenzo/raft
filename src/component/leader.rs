@@ -1,6 +1,6 @@
 use crate::component::{message::ServerMessage, order::Order, Follower, ServerT};
 
-use super::{Candidate, Leader, Server};
+use super::{Leader, Server};
 
 impl Server<Leader> {
     pub fn to_follower(self) -> Server<Follower> {
@@ -10,8 +10,10 @@ impl Server<Leader> {
             total_elements: self.total_elements,
             message_rx: self.message_rx,
             order_rx: self.order_rx,
+            self_transmitter: self.self_transmitter,
             neighbours: self.neighbours,
             info: self.info,
+            settings: self.settings,
         }
     }
 
@@ -47,24 +49,34 @@ impl Server<Leader> {
     }
 
     fn on_send_heartbeat(mut self) -> Box<dyn ServerT> {
-        self.update_timer(ServerMessage::SendHeartBeat, Some(2));
-        todo!("Change this message");
-        let message = ServerMessage::LogRequest {
-            leader_id: self.name,
-            current_term: self.info.current_term,
-            prefix_len: self.info.current_term,
-            prefix_term: self.info.current_term,
-            commit_length: 2,
-            suffix: vec![],
-        };
-        self.broadcast(|(_, tx)| tx.send(ServerMessage::TimerExpired).unwrap());
+        if self.settings.activated {
+            self.update_timer(ServerMessage::SendHeartBeat, Some(2));
+            self.neighbours.keys().for_each(|&follower| {
+                self.replicate_log(follower);
+            });
+        }
         Box::new(self)
+    }
+
+    pub fn on_disconnect(mut self) -> (bool, Box<dyn ServerT>) {
+        self.settings.activated = false;
+        (false, Box::new(self))
+    }
+    pub fn on_connect(mut self) -> (bool, Box<dyn ServerT>) {
+        self.settings.activated = true;
+        (false, Box::new(self))
     }
 }
 
 impl ServerT for Server<Leader> {
     fn handle_order(self: Box<Self>, order: Order) -> (bool, Box<dyn ServerT>) {
-        (true, Box::new(*self))
+        match order {
+            Order::Disconnect => self.on_disconnect(),
+            Order::Reconnect => self.on_connect(),
+            _ => (false, Box::new(*self)),
+            
+
+        }
     }
     fn handle_server_message(self: Box<Self>, message: ServerMessage) -> Box<dyn ServerT> {
         match message {

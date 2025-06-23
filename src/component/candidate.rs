@@ -25,6 +25,16 @@ impl Server<Candidate> {
                 .unwrap();
         }
     }
+
+    pub fn on_disconnect(mut self) -> (bool, Box<dyn ServerT>) {
+        self.settings.activated = false;
+        (false, Box::new(self))
+    }
+    pub fn on_connect(mut self) -> (bool, Box<dyn ServerT>) {
+        self.settings.activated = true;
+        (false, Box::new(self))
+    }
+
     pub fn to_leader(self) -> Server<Leader> {
         Server {
             _state: std::marker::PhantomData,
@@ -32,8 +42,10 @@ impl Server<Candidate> {
             total_elements: self.total_elements,
             message_rx: self.message_rx,
             order_rx: self.order_rx,
+            self_transmitter: self.self_transmitter,
             neighbours: self.neighbours,
             info: self.info,
+            settings: self.settings,
         }
     }
 
@@ -44,8 +56,10 @@ impl Server<Candidate> {
             total_elements: self.total_elements,
             message_rx: self.message_rx,
             order_rx: self.order_rx,
+            self_transmitter: self.self_transmitter,
             neighbours: self.neighbours,
             info: self.info,
+            settings: self.settings,
         }
     }
 
@@ -97,8 +111,7 @@ impl Server<Candidate> {
 
         println!("{} is spawning a timer", self.name);
         self.update_timer(ServerMessage::TimerExpired, Some(10));
-
-        self.broadcast(|(_, transmitter)| transmitter.send(message.clone()).unwrap());
+        self.neighbours.values().for_each(|follower| follower.send(message.clone()).unwrap());
         Box::new(self)
     }
 
@@ -133,22 +146,18 @@ impl Server<Candidate> {
             let quorum = (self.total_elements + 1).div_ceil(2) as usize;
             if self.info.votes_received.len() >= quorum {
                 self.info.current_leader = self.name;
-                let neigh: Vec<_> = self
-                    .neighbours
-                    .keys()
-                    .filter(|(&&follower)| follower != self.name)
-                    .copied()
-                    .collect();
                 println!(
                     "\n {} got elected to leader {:?}",
                     self.name, self.info.votes_received
                 );
-                neigh.iter().for_each(|&follower| {
+                let neighs:Vec<_> = self.neighbours.keys().copied().collect();
+                for follower in neighs{
                     self.info.sent_length.insert(follower, self.info.log.len());
                     self.info.acked_length.insert(follower, 0);
-                    self.replicate_log(self.name, follower);
+                    self.replicate_log(follower);
                     println!("{} Sent log to {}", self.name, follower);
-                });
+                }
+                self.self_transmitter.send(ServerMessage::SendHeartBeat).unwrap();
                 Box::new(self.to_leader())
             } else {
                 // Not yet elected
@@ -216,6 +225,7 @@ impl ServerT for Server<Candidate> {
             Order::Exit => (true, Box::new(*self)),
             Order::ConvertToFollower => (false, Box::new((*self).to_follower())),
             Order::ConvertToCandidate => (false, Box::new(*self)),
+            _ => (false, Box::new(*self)),
         }
     }
 }

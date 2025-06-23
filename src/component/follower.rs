@@ -12,13 +12,24 @@ impl Server<Follower> {
             total_elements: self.total_elements,
             message_rx: self.message_rx,
             order_rx: self.order_rx,
+            self_transmitter: self.self_transmitter,
             neighbours: self.neighbours,
             info: self.info,
+            settings: self.settings,
         }
     }
     fn on_heartbeat_received(mut self, leader_id: usize, current_term: usize) -> Box<dyn ServerT> {
         self.update_timer(ServerMessage::TimerExpired, Some(10));
         Box::new(self)
+    }
+
+    pub fn on_disconnect(mut self) -> (bool, Box<dyn ServerT>) {
+        self.settings.activated = false;
+        (false, Box::new(self))
+    }
+    pub fn on_connect(mut self) -> (bool, Box<dyn ServerT>) {
+        self.settings.activated = true;
+        (false, Box::new(self))
     }
 
     fn on_timer_expired(mut self) -> Box<dyn ServerT> {
@@ -41,7 +52,7 @@ impl Server<Follower> {
         println!("{} is spawning a timer", self.name);
         self.update_timer(ServerMessage::TimerExpired, Some(10));
 
-        self.broadcast(|(_, transmitter)| transmitter.send(message.clone()).unwrap());
+        self.neighbours.values().for_each(|follower| follower.send(message.clone()).unwrap());
         Box::new(self.to_candidate())
     }
     fn on_vote_request(
@@ -100,6 +111,7 @@ impl ServerT for Server<Follower> {
             Order::Exit => (true, Box::new(*self)),
             Order::ConvertToFollower => (false, Box::new(*self)),
             Order::ConvertToCandidate => (false, Box::new((*self).to_candidate())),
+            _ => (false, Box::new(*self)),
         }
     }
 

@@ -4,6 +4,8 @@ pub mod consensus_info;
 pub mod order;
 use order::Order;
 pub mod message;
+pub mod server_settings;
+use server_settings::*;
 use crossbeam::channel::*;
 use message::ServerMessage;
 
@@ -45,8 +47,10 @@ pub struct Server<S: StateT> {
     total_elements: usize,
     order_rx: Receiver<Order>,
     message_rx: Receiver<ServerMessage>,
+    self_transmitter: Sender<ServerMessage>,
     pub neighbours: HashMap<usize, Sender<ServerMessage>>,
     info: ConsensusInfo,
+    settings: ServerSettings,
 }
 
 mod candidate;

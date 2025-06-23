@@ -32,16 +32,7 @@ impl<T: StateT> Server<T> {
         self.name
     }
     pub fn get_self_sender(&self) -> &Sender<ServerMessage> {
-        &self.neighbours[&self.name]
-    }
-    pub fn broadcast<F>(&mut self, func: F)
-    where
-        F: Fn((&usize, &Sender<ServerMessage>)),
-    {
-        self.neighbours
-            .iter()
-            .filter(|(&k, _)| k != self.name)
-            .for_each(func);
+        &self.self_transmitter
     }
 
     pub fn update_timer(&mut self, message: ServerMessage, time: Option<usize>) {
@@ -118,6 +109,7 @@ impl<T: StateT> Server<T> {
         return received_newer_term;
     }
 
+
     pub fn handle_log_request(
         &mut self,
         leader_id: usize,
@@ -175,16 +167,15 @@ impl<T: StateT> Server<T> {
         return equal_term;
     }
 
-    pub fn replicate_log(&self, leader_id: usize, follower_id: usize) {
+    pub fn replicate_log(&self, follower_id: usize) {
         let prefix_len = self.info.sent_length[&follower_id];
-        // TODO generate the suffix from prefix to the end!
         let suffix: Vec<LogEntry> = self.info.log[prefix_len..].to_vec();
         let prefix_term = match self.info.log.last() {
             Some(entry) => entry.term,
             None => 0,
         };
         let message = ServerMessage::LogRequest {
-            leader_id: leader_id,
+            leader_id: self.name,
             current_term: self.info.current_term,
             prefix_len: prefix_len,
             prefix_term: prefix_term,
@@ -228,6 +219,8 @@ where
             )
         }
     }
+
+
 }
 
 impl<T: StateT> fmt::Display for Server<T> {
