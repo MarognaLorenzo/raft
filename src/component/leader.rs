@@ -21,7 +21,7 @@ impl Server<Leader> {
         if responder_term > self.info.current_term {
             self.info.current_term = responder_term;
             self.info.voted_for = None;
-            self.update_timer(ServerMessage::TimerExpired, Some(10));
+            self.update_timer(ServerMessage::TimerExpired, None);
             Box::new(self.to_follower())
         } else {
             Box::new(self)

@@ -19,7 +19,7 @@ impl Server<Follower> {
         }
     }
     fn on_heartbeat_received(mut self, leader_id: usize, current_term: usize) -> Box<dyn ServerT> {
-        self.update_timer(ServerMessage::TimerExpired, Some(10));
+        self.update_timer(ServerMessage::TimerExpired, None);
         Box::new(self)
     }
 
@@ -50,7 +50,7 @@ impl Server<Follower> {
         };
 
         println!("{} is spawning a timer", self.name);
-        self.update_timer(ServerMessage::TimerExpired, Some(10));
+        self.update_timer(ServerMessage::TimerExpired, None);
 
         self.neighbours.values().for_each(|follower| follower.send(message.clone()).unwrap());
         Box::new(self.to_candidate())
@@ -95,7 +95,7 @@ impl Server<Follower> {
         if responder_term > self.info.current_term {
             self.info.current_term = responder_term;
             self.info.voted_for = None;
-            // TODO check eventually cancel election timer
+            self.update_timer(ServerMessage::TimerExpired, None);
         }
         Box::new(self)
     }

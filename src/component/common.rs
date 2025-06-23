@@ -44,7 +44,12 @@ impl<T: StateT> Server<T> {
         let (stop_send, stop_recv) = unbounded();
         self.info.old_timer_tx = Some(stop_send);
         let sender = self.get_self_sender().clone();
-        let h = thread::Builder::new()
+        let waiting_time = time.unwrap_or(match message {
+            ServerMessage::TimerExpired => self.settings.election_timeout,
+            ServerMessage::SendHeartBeat => self.settings.heartbeat_timeout,
+            _ => 10,
+        });
+        let _ = thread::Builder::new()
             .name("Timer".to_string())
             .spawn(move || {
                 select! {
@@ -52,7 +57,7 @@ impl<T: StateT> Server<T> {
                         // timer cancelled
                         return;
                     }
-                    default(Duration::from_secs(time.unwrap_or(10) as u64)) => {
+                    default(Duration::from_secs(time.unwrap_or(waiting_time) as u64)) => {
                         //timeout elapsed
                         sender.send(message).unwrap();
                     }
@@ -134,7 +139,7 @@ impl<T: StateT> Server<T> {
         let equal_term: bool = leader_term == self.info.current_term;
         if equal_term {
             self.info.current_leader = leader_id;
-            self.update_timer(ServerMessage::TimerExpired, Some(10));
+            self.update_timer(ServerMessage::TimerExpired, None);
         }
 
         let log_ok: bool = prefix_len == 0
