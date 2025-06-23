@@ -150,6 +150,7 @@ impl Server<Candidate> {
                     "\n {} got elected to leader {:?}",
                     self.name, self.info.votes_received
                 );
+                println!("{} about to be elected leader: {:?}", self.name, self.settings );
                 let neighs:Vec<_> = self.neighbours.keys().copied().collect();
                 for follower in neighs{
                     self.info.sent_length.insert(follower, self.info.log.len());
@@ -218,6 +219,8 @@ impl ServerT for Server<Candidate> {
 
     fn handle_order(self: Box<Self>, order: Order) -> (bool, Box<dyn ServerT>) {
         match order {
+            Order::Disconnect => self.on_disconnect(),
+            Order::Reconnect => self.on_connect(),
             Order::SendInfo { info } => {
                 // println!("I am candidate {} and I received info {}", self.name, info);
                 (false, Box::new(*self))

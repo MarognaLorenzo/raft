@@ -108,6 +108,8 @@ impl ServerT for Server<Follower> {
                 // println!("I am candidate {} and I received info {}", self.name, info);
                 (false, Box::new(*self))
             }
+            Order::Disconnect => self.on_disconnect(),
+            Order::Reconnect => self.on_connect(),
             Order::Exit => (true, Box::new(*self)),
             Order::ConvertToFollower => (false, Box::new(*self)),
             Order::ConvertToCandidate => (false, Box::new((*self).to_candidate())),
