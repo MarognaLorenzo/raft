@@ -1,6 +1,6 @@
 #[derive(Debug, Clone)]
 pub enum Order {
-    SendInfo { info: usize },
+    SendInfo { info: String },
     ConvertToFollower,
     ConvertToCandidate,
     Disconnect,

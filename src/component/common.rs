@@ -1,5 +1,5 @@
 use rand::Rng;
-use std::{fmt, thread, time::Duration};
+use std::{cmp::min, fmt, thread, time::Duration};
 
 use crossbeam::{
     channel::{select_biased, unbounded, SendError, Sender},
@@ -138,7 +138,7 @@ impl<T: StateT> Server<T> {
         // return true if I want to go into follower state:
         let equal_term: bool = leader_term == self.info.current_term;
         if equal_term {
-            self.info.current_leader = leader_id;
+            self.info.current_leader = Some(leader_id);
             self.update_timer(ServerMessage::TimerExpired, None);
         }
 
@@ -148,10 +148,10 @@ impl<T: StateT> Server<T> {
                 .log
                 .get(prefix_len - 1)
                 .is_some_and(|entry| entry.term == prefix_term);
-        let answer: bool = leader_term == self.info.current_leader && log_ok;
+        let answer: bool = self.info.current_term == leader_term && log_ok;
         let message = if answer {
-            // TODO APPENDENTRIES
             let ack = prefix_len + suffix.len();
+            self.append_entries(prefix_len, leader_commit, suffix);
             ServerMessage::LogResponse {
                 responder_id: self.name,
                 responder_term: self.info.current_term,
@@ -170,6 +170,23 @@ impl<T: StateT> Server<T> {
 
         self.send_message(message, leader_id).unwrap();
         return equal_term;
+    }
+
+    fn append_entries(&mut self, prefix_len: usize, leader_commit: usize, suffix: Vec<LogEntry>) {
+        if !suffix.is_empty() && self.info.log.len() > prefix_len {
+            let index = min(self.info.log.len(), prefix_len + suffix.len())-1;
+            if self.info.log[index].term != suffix[index - prefix_len].term {
+                self.info.log.truncate(prefix_len);
+            }
+        }
+        if prefix_len + suffix.len() > self.info.log.len() {
+            let skip = self.info.log.len().saturating_sub(prefix_len);
+            self.info.log.extend(suffix.iter().skip(skip).cloned());
+        }
+        if leader_commit > self.info.commit_length {
+            self.info.commit_length = leader_commit;
+            // send all info from commitLength to leader_commit to the application.
+        }
     }
 
     pub fn replicate_log(&self, follower_id: usize) {

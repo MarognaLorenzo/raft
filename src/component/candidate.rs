@@ -135,6 +135,15 @@ impl Server<Candidate> {
         }
     }
 
+    fn on_send_info(self, msg: String) -> (bool, Box<dyn ServerT>) {
+        let sender = self.get_self_sender().clone();
+        thread::spawn(move ||{
+            thread::sleep(Duration::from_secs(1));
+            sender.send(ServerMessage::SendInfo { msg: msg }).unwrap();
+        });
+        (false, Box::new(self))
+    }
+
     fn on_vote_receive(
         mut self,
         responser_id: usize,
@@ -145,7 +154,7 @@ impl Server<Candidate> {
             self.info.votes_received.push(responser_id);
             let quorum = (self.total_elements + 1).div_ceil(2) as usize;
             if self.info.votes_received.len() >= quorum {
-                self.info.current_leader = self.name;
+                self.info.current_leader = Some(self.name);
                 println!(
                     "\n {} got elected to leader {:?}",
                     self.name, self.info.votes_received
@@ -213,6 +222,7 @@ impl ServerT for Server<Candidate> {
                 responder_term,
                 response,
             } => self.on_vote_receive(responser_id, responder_term, response),
+            ServerMessage::SendInfo { msg } => self.on_send_info(msg).1,
             _ => Box::new(*self),
         }
     }
@@ -221,10 +231,7 @@ impl ServerT for Server<Candidate> {
         match order {
             Order::Disconnect => self.on_disconnect(),
             Order::Reconnect => self.on_connect(),
-            Order::SendInfo { info } => {
-                // println!("I am candidate {} and I received info {}", self.name, info);
-                (false, Box::new(*self))
-            }
+            Order::SendInfo { info } => self.on_send_info(info),
             Order::Exit => (true, Box::new(*self)),
             Order::ConvertToFollower => (false, Box::new((*self).to_follower())),
             Order::ConvertToCandidate => (false, Box::new(*self)),

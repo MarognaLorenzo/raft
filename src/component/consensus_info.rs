@@ -8,11 +8,10 @@ pub struct ConsensusInfo {
     pub voted_for: Option<usize>,
     pub log: Vec<LogEntry>,
     pub commit_length: usize,
-    pub current_leader: usize,
+    pub current_leader: Option<usize>,
     pub votes_received: Vec<usize>,
     pub sent_length: HashMap<usize, usize>,
     pub acked_length: HashMap<usize, usize>,
-    pub leader_has_visited: bool,
     pub old_timer_tx: Option<Sender<()>>,
 }
 
@@ -23,11 +22,10 @@ impl ConsensusInfo {
             voted_for: None,
             log: vec![],
             commit_length: 0,
-            current_leader: 0,
+            current_leader: None,
             votes_received: vec![],
             sent_length: HashMap::new(),
             acked_length: HashMap::new(),
-            leader_has_visited: false,
             old_timer_tx: None,
         }
     }

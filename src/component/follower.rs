@@ -91,6 +91,16 @@ impl Server<Follower> {
         Box::new(self)
     }
 
+    fn on_send_info(mut self, msg: String) -> (bool, Box<dyn ServerT>) {
+        if self.info.current_leader.is_none() {
+            panic!("Follower {} has no leader", self.name);
+        }
+        let leader = self.info.current_leader.unwrap();
+        let message = ServerMessage::SendInfo { msg: msg};
+        self.send_message(message, leader).unwrap();
+        return (false, Box::new(self));
+    }
+
     fn on_vote_receive(mut self, _: usize, responder_term: usize, _: bool) -> Box<dyn ServerT> {
         if responder_term > self.info.current_term {
             self.info.current_term = responder_term;
@@ -104,10 +114,7 @@ impl Server<Follower> {
 impl ServerT for Server<Follower> {
     fn handle_order(self: Box<Self>, order: Order) -> (bool, Box<dyn ServerT>) {
         match order {
-            Order::SendInfo { info } => {
-                // println!("I am candidate {} and I received info {}", self.name, info);
-                (false, Box::new(*self))
-            }
+            Order::SendInfo { info } => self.on_send_info(info),
             Order::Disconnect => self.on_disconnect(),
             Order::Reconnect => self.on_connect(),
             Order::Exit => (true, Box::new(*self)),

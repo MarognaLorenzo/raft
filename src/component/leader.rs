@@ -1,4 +1,4 @@
-use crate::component::{message::ServerMessage, order::Order, Follower, ServerT};
+use crate::component::{consensus_info::LogEntry, message::ServerMessage, order::Order, Follower, ServerT};
 
 use super::{Leader, Server};
 
@@ -15,6 +15,23 @@ impl Server<Leader> {
             info: self.info,
             settings: self.settings,
         }
+    }
+    
+    fn broadcast_replicate_log(&mut self) {
+        if self.settings.activated {
+            self.update_timer(ServerMessage::SendHeartBeat, Some(2));
+            self.neighbours.keys().for_each(|&follower| {
+                self.replicate_log(follower);
+            });
+        }
+    }
+
+    fn on_send_info(mut self, msg:String) -> (bool, Box<dyn ServerT>) {
+        let entry = LogEntry { data: msg, term: self.info.current_term };
+        self.info.log.push(entry);
+        self.info.acked_length.insert(self.name, self.info.log.len());
+        self.broadcast_replicate_log();
+        return (false, Box::new(self))
     }
 
     fn on_vote_receive(mut self, _: usize, responder_term: usize, _: bool) -> Box<dyn ServerT> {
@@ -49,12 +66,7 @@ impl Server<Leader> {
     }
 
     fn on_send_heartbeat(mut self) -> Box<dyn ServerT> {
-        if self.settings.activated {
-            self.update_timer(ServerMessage::SendHeartBeat, Some(2));
-            self.neighbours.keys().for_each(|&follower| {
-                self.replicate_log(follower);
-            });
-        }
+        self.broadcast_replicate_log();
         Box::new(self)
     }
 
@@ -73,13 +85,14 @@ impl ServerT for Server<Leader> {
         match order {
             Order::Disconnect => self.on_disconnect(),
             Order::Reconnect => self.on_connect(),
+            Order::SendInfo { info } => self.on_send_info(info),
             _ => (false, Box::new(*self)),
-            
-
         }
     }
     fn handle_server_message(self: Box<Self>, message: ServerMessage) -> Box<dyn ServerT> {
         match message {
+            // TODO : On VoteResponse on_log response
+            ServerMessage:: SendInfo { msg } => self.on_send_info(msg).1,
             ServerMessage::VoteResponse {
                 responser_id,
                 responder_term,

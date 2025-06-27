@@ -6,6 +6,10 @@ pub enum ServerMessage {
         from: usize,
         to: usize,
     },
+    
+    SendInfo {
+        msg: String,
+    },
 
     VoteRequest {
         candidate_id: usize,

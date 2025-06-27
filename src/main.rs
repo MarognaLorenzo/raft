@@ -45,6 +45,7 @@ fn main() {
         })
         .collect();
 
+    // todo!("Add delays and disconnections from Servers");main
     wait_for_user();
     controllers.iter().for_each(|tx| tx.send(Order::Disconnect).unwrap());
 
@@ -59,7 +60,7 @@ fn main() {
 
     controllers
         .iter()
-        .for_each(|tx| tx.send(Order::SendInfo { info: 10 }).unwrap());
+        .for_each(|tx| tx.send(Order::SendInfo { info: "Hello myself".to_string() }).unwrap());
 
     thread::sleep(Duration::from_secs(3));
 
