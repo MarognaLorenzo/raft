@@ -54,22 +54,114 @@ fn main() {
         .collect();
 
     // todo!("Add delays and disconnections from Servers");main
-    wait_for_user();
-    controllers.iter().for_each(|tx| tx.send(Order::Disconnect).unwrap());
 
+    println!("Command Parser");
+    println!("Enter commands in the format: <number> <word>");
+    println!("Type 'exit' to quit the program.");
 
-    wait_for_user();
-    controllers.iter().for_each(|tx| tx.send(Order::Reconnect).unwrap());
+    // The main loop for processing commands
+    loop {
+        // --- 1. Get user input ---
+        print!("> ");
+        // Flush the output to ensure the prompt is displayed immediately
+        io::stdout().flush().expect("Failed to flush stdout");
 
-    wait_for_user();
+        let mut input = String::new(); // Create a new, mutable String to store user input
+        
+        // Read a line from standard input and store it in the `input` string
+        io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read line");
 
-    log::info!("\nSending INFO!");
+        // Trim whitespace from the input string and convert it to lowercase for case-insensitive comparison
+        let trimmed_input = input.trim();
 
-    controllers
-        .iter()
-        .for_each(|tx| tx.send(Order::SendInfo { info: "Hello myself".to_string() }).unwrap());
+        // --- 2. Check for exit command ---
+        if trimmed_input.to_lowercase() == "exit" {
+            println!("Exiting the program. Goodbye!");
+            break; // Exit the loop
+        }
 
-    thread::sleep(Duration::from_secs(3));
+        // --- 3. Parse the command ---
+        // Split the input string by whitespace to get individual parts
+        let parts: Vec<&str> = trimmed_input.split_whitespace().collect();
+
+        // Check if the command has exactly two parts (a number and a word)
+        if parts.len() != 2 {
+            println!("Invalid command format. Please use: <number> <word>");
+            continue; // Go to the next iteration of the loop
+        }
+
+        // Attempt to parse the first part as a number (i32)
+        let number_result = parts[0].parse::<usize>();
+        let word = parts[1]; // The second part is the word
+
+        // --- 4. Process the command ---
+        match number_result {
+            // If the first part was successfully parsed as a number
+            Ok(number) => {
+                // Now you have the number and the word, and you can perform actions based on them.
+                println!("  Number: {}", number);
+                println!("  Word:   '{}'", word);
+
+                if number >= n_servers {
+                    println!("  Error: Received number {} and server available are 0-{}", number, n_servers-1);
+                    continue;
+                }
+                
+                // You can add more logic here based on the 'word' as well.
+                let lower_case_word = word.to_lowercase();
+                if lower_case_word.starts_with("s_") {
+                    if let Some(extracted_string) = lower_case_word.strip_prefix("s_") {
+                        if !extracted_string.is_empty() {
+                            println!("  Detected 's_' command! Extracted string: '{}'", extracted_string);
+                            controllers[number]
+                                .send(Order::SendInfo { info: extracted_string.to_string() })
+                                .unwrap();
+                        } else {
+                            println!("  's_' command detected, but no string followed (e.g., 'send_').");
+                        }
+                    }
+                }
+                match lower_case_word.as_str() {
+                    "dis" => {
+                        println!("  Disconnecting {}", number);
+                        controllers[number].send(Order::Disconnect).unwrap();
+                    },
+                    "con" => {
+                        println!("  Connecting {}", number);
+                        controllers[number].send(Order::Reconnect).unwrap();
+                    },
+
+                    "rust" => println!("  This is a Rust command!"),
+                    _ => println!("  The word is not a valid command"),
+                }
+            }
+            // If parsing the number failed (e.g., the first part was not a valid number)
+            Err(e) => {
+                println!("Error: Could not parse '{}' as a number. Details: {}", parts[0], e);
+                // The loop continues, prompting for a new command
+            }
+        }
+        println!("----------------------------------"); // Separator for clarity
+    }
+
+    // wait_for_user();
+    // controllers.iter().for_each(|tx| tx.send(Order::Disconnect).unwrap());
+    //
+    //
+    // wait_for_user();
+    // controllers.iter().for_each(|tx| tx.send(Order::Reconnect).unwrap());
+    //
+    // wait_for_user();
+    //
+    // log::info!("\nSending INFO!");
+    //
+    // controllers
+    //     .iter()
+    //     .for_each(|tx| tx.send(Order::SendInfo { info: "Hello myself".to_string() }).unwrap());
+    //
+    // thread::sleep(Duration::from_secs(3));
 
     // log::info!();
     // log::info!("Starting changing states");
@@ -84,14 +176,14 @@ fn main() {
     //     tx.send(order).unwrap();
     // });
 
-    thread::sleep(Duration::from_secs(3));
-
-    log::info!("\nExiting from everyone!");
-    wait_for_user();
-    controllers
-        .iter()
-        .for_each(|tx| tx.send(Order::Exit).unwrap());
-
+    // thread::sleep(Duration::from_secs(3));
+    //
+    // log::info!("\nExiting from everyone!");
+    // wait_for_user();
+    // controllers
+    //     .iter()
+    //     .for_each(|tx| tx.send(Order::Exit).unwrap());
+    //
     log::info!("DONE");
 }
 
