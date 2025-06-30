@@ -95,7 +95,7 @@ impl Server<Leader> {
             if answer && ack >= self.info.acked_length[&responder_id] {
                 self.info.sent_length.insert(responder_id, ack);
                 self.info.acked_length.insert(responder_id, ack);
-                // TODO CommitLogEntries
+                self.commit_log_entries();
             } else if self.info.sent_length[&responder_id] > 0 {
                 self.info.sent_length.entry(responder_id).and_modify(|v| *v-=1 );
                 self.replicate_log(responder_id);
