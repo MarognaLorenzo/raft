@@ -96,7 +96,7 @@ impl<T: StateT> Server<T> {
             response: answer,
         };
         if !answer {
-            log::info!(
+            log::debug!(
                 "{} answered no to {}. (term {}) (logOk {}) (voted_ok {}) - voted => {:?}",
                 self.name,
                 candidate_id,
@@ -106,7 +106,7 @@ impl<T: StateT> Server<T> {
                 self.info.voted_for
             );
         } else {
-            log::info!("{} answered yes to {}", self.name, candidate_id);
+            log::debug!("{} answered yes to {}", self.name, candidate_id);
         }
         self.send_message(accepted_request, candidate_id).unwrap();
 
@@ -126,7 +126,7 @@ impl<T: StateT> Server<T> {
     ) -> bool {
         // Change to return true if need to change to follower ->
         // let mut
-        log::info!(
+        log::debug!(
             "{} received a log request from term {} and is in term {}",
             self.name, leader_term, self.info.current_term
         );
@@ -225,13 +225,13 @@ where
             select_biased!(
                 recv(message_receiver) -> mes => {
                     let message = mes.unwrap();
-                    log::info!("network - {} received {:?}", boxed, message);
+                    log::debug!("network - {} received {:?}", boxed, message);
                     let next = boxed.handle_server_message(message);
                     boxed = next;
                 }
                 recv(order_receiver) -> mes => {
                     let message = mes.unwrap();
-                    log::info!("command - {} received {:?}", boxed, message);
+                    log::debug!("command - {} received {:?}", boxed, message);
                     let (stop, next) = boxed.handle_order(message);
                     boxed = next;
                     if stop {

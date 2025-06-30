@@ -109,7 +109,7 @@ impl Server<Candidate> {
             last_term: last_term,
         };
 
-        log::info!("{} is spawning a timer", self.name);
+        log::debug!("{} is spawning a timer", self.name);
         self.update_timer(ServerMessage::TimerExpired, None);
         self.neighbours.values().for_each(|follower| follower.send(message.clone()).unwrap());
         Box::new(self)
@@ -168,13 +168,13 @@ impl Server<Candidate> {
                     "\n {} got elected to leader {:?}",
                     self.name, self.info.votes_received
                 );
-                log::info!("{} about to be elected leader: {:?}", self.name, self.settings );
+                log::debug!("{} about to be elected leader: {:?}", self.name, self.settings );
                 let neighs:Vec<_> = self.neighbours.keys().copied().collect();
                 for follower in neighs{
                     self.info.sent_length.insert(follower, self.info.log.len());
                     self.info.acked_length.insert(follower, 0);
                     self.replicate_log(follower);
-                    log::info!("{} Sent log to {}", self.name, follower);
+                    log::debug!("{} Sent log to {}", self.name, follower);
                 }
                 self.self_transmitter.send(ServerMessage::SendHeartBeat).unwrap();
                 Box::new(self.to_leader())

@@ -34,10 +34,10 @@ fn main() {
                 let to = (from + 1) % n_servers;
                 let builded_message: ServerMessage = ServerMessage::Ping { from: from, to: to };
                 if let Err(e) = server.send_message(builded_message, to) {
-                    log::info!("Failed to send: {:?}", e.0);
+                    log::error!("Failed to send: {:?}", e.0);
                 }
                 let received_message = server.open_message();
-                log::info!(
+                log::debug!(
                     "I ({}) received a message! {:?}",
                     server.get_name(),
                     received_message
@@ -118,7 +118,7 @@ pub fn initialize_servers(n_servers: usize) -> (Vec<Server<Initial>>, Vec<Sender
         })
         .collect();
 
-    log::info!("Servers {}", servers.len());
+    log::debug!("Servers {}", servers.len());
 
     for (i, sender) in senders.iter().enumerate() {
         for (j, server) in servers.iter_mut().enumerate() {
@@ -127,8 +127,8 @@ pub fn initialize_servers(n_servers: usize) -> (Vec<Server<Initial>>, Vec<Sender
             }
         }
     }
-    log::info!("Neighbours: {:?}", servers[0].neighbours);
-    log::info!("Senders size: {}", servers[0].neighbours_len());
+    log::debug!("Neighbours: {:?}", servers[0].neighbours);
+    log::debug!("Senders size: {}", servers[0].neighbours_len());
 
     return (servers, controllers);
 }
