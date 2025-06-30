@@ -7,19 +7,16 @@ impl Server<Leader> {
         Server {
             _state: std::marker::PhantomData,
             name: self.name,
-            message_rx: self.message_rx,
-            order_rx: self.order_rx,
-            self_transmitter: self.self_transmitter,
-            neighbours: self.neighbours,
             info: self.info,
             settings: self.settings,
+            components: self.components,
         }
     }
     
     fn broadcast_replicate_log(&mut self) {
         if self.settings.activated {
             self.update_timer(ServerMessage::SendHeartBeat, Some(2));
-            self.neighbours.keys().for_each(|&follower| {
+            self.components.neighbours.keys().for_each(|&follower| {
                 self.replicate_log(follower);
             });
         }

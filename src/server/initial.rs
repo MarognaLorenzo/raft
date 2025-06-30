@@ -1,3 +1,4 @@
+use crate::server::component::ServerComponents;
 use crate::server::consensus_info::ConsensusInfo;
 use crate::server::server_settings::ServerSettings;
 use crate::server::{message::ServerMessage, order::Order};
@@ -5,7 +6,7 @@ use crate::server::{Follower, ServerT};
 
 use super::{Initial, Server};
 use crossbeam::channel::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 impl Server<Initial> {
     pub fn new(
@@ -19,29 +20,29 @@ impl Server<Initial> {
         Server {
             _state: std::marker::PhantomData,
             name,
-            order_rx: command_rx,
-            message_rx: network_rx,
-            self_transmitter: network_tx,
-            neighbours,
             info: ConsensusInfo::new(),
             settings: ServerSettings::new(total_elements),
+            components: ServerComponents::new(
+                command_rx,
+                network_rx,
+                network_tx,
+                neighbours,
+                VecDeque::new()
+            ),
         }
     }
 
     pub fn add_sender(&mut self, name: usize, sender: Sender<ServerMessage>) {
-        self.neighbours.insert(name, sender);
+        self.components.neighbours.insert(name, sender);
     }
 
     pub fn completed(self) -> Server<Follower> {
         let component = Server {
             _state: std::marker::PhantomData,
             name: self.name,
-            order_rx: self.order_rx,
-            message_rx: self.message_rx,
-            self_transmitter: self.self_transmitter,
-            neighbours: self.neighbours,
             info: self.info,
             settings: self.settings,
+            components: self.components,
         };
         // component.candidate();
         return component;

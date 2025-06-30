@@ -1,4 +1,4 @@
-use std::thread;
+use std::thread::{self, sleep};
 use std::time::Duration;
 
 
@@ -8,7 +8,7 @@ use crate::server::{message::ServerMessage, order::Order, ServerT};
 use super::{Candidate, Follower, Leader, Server};
 impl Server<Candidate> {
     pub fn candidate(&self) {
-        for neigh in self.neighbours.values() {
+        for neigh in self.components.neighbours.values() {
             neigh
                 .send(super::message::ServerMessage::VoteRequest {
                     candidate_id: self.name,
@@ -33,12 +33,9 @@ impl Server<Candidate> {
         Server {
             _state: std::marker::PhantomData,
             name: self.name,
-            message_rx: self.message_rx,
-            order_rx: self.order_rx,
-            self_transmitter: self.self_transmitter,
-            neighbours: self.neighbours,
             info: self.info,
             settings: self.settings,
+            components: self.components,
         }
     }
 
@@ -46,12 +43,9 @@ impl Server<Candidate> {
         Server {
             _state: std::marker::PhantomData,
             name: self.name,
-            message_rx: self.message_rx,
-            order_rx: self.order_rx,
-            self_transmitter: self.self_transmitter,
-            neighbours: self.neighbours,
             info: self.info,
             settings: self.settings,
+            components: self.components,
         }
     }
 
@@ -103,7 +97,7 @@ impl Server<Candidate> {
 
         log::debug!("{} is spawning a timer", self.name);
         self.update_timer(ServerMessage::TimerExpired, None);
-        self.neighbours.values().for_each(|follower| follower.send(message.clone()).unwrap());
+        self.components.neighbours.values().for_each(|follower| follower.send(message.clone()).unwrap());
         Box::new(self)
     }
 
@@ -127,13 +121,19 @@ impl Server<Candidate> {
         }
     }
 
-    fn on_send_info(self, msg: String) -> (bool, Box<dyn ServerT>) {
-        let sender = self.get_self_sender().clone();
-        thread::spawn(move ||{
-            thread::sleep(Duration::from_secs(1));
-            sender.send(ServerMessage::SendInfo { msg: msg }).unwrap();
-        });
+    fn on_send_info(mut self, msg: String) -> (bool, Box<dyn ServerT>) {
+        self.components.message_queue.push_back(msg);
+        self.get_self_sender().send(ServerMessage::ForwardInfo).unwrap();
         (false, Box::new(self))
+    }
+
+    fn on_forward_info(self) -> Box<dyn ServerT>{
+        let sender = self.get_self_sender().clone();
+        thread::spawn(move || {
+            sleep(Duration::from_secs(1));
+            sender.send(ServerMessage::ForwardInfo).unwrap();
+        });
+        Box::new(self)
     }
 
     fn on_log_response (mut self, _responser_id: usize, responder_term: usize, _ack: usize, _answer: bool) -> Box<dyn ServerT> {
@@ -161,14 +161,14 @@ impl Server<Candidate> {
                     self.name, self.info.votes_received
                 );
                 log::debug!("{} about to be elected leader: {:?}", self.name, self.settings );
-                let neighs:Vec<_> = self.neighbours.keys().copied().collect();
+                let neighs:Vec<_> = self.components.neighbours.keys().copied().collect();
                 for follower in neighs{
                     self.info.sent_length.insert(follower, self.info.log.len());
                     self.info.acked_length.insert(follower, 0);
                     self.replicate_log(follower);
                     log::debug!("{} Sent log to {}", self.name, follower);
                 }
-                self.self_transmitter.send(ServerMessage::SendHeartBeat).unwrap();
+                self.components.self_transmitter.send(ServerMessage::SendHeartBeat).unwrap();
                 Box::new(self.to_leader())
             } else {
                 // Not yet elected
@@ -230,6 +230,7 @@ impl ServerT for Server<Candidate> {
                 responder_term,
                 response,
             } => self.on_vote_receive(responser_id, responder_term, response),
+            ServerMessage::ForwardInfo => self.on_forward_info(),
             ServerMessage::LogResponse {
                 responder_id,
                 responder_term,

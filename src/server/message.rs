@@ -11,6 +11,8 @@ pub enum ServerMessage {
         msg: String,
     },
 
+    ForwardInfo,
+
     VoteRequest {
         candidate_id: usize,
         candidate_term: usize,

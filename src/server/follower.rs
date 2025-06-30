@@ -1,3 +1,6 @@
+use std::{thread::{self, sleep}, time::Duration};
+
+
 use crate::server::{
     consensus_info::LogEntry, message::ServerMessage, order::Order, Candidate, ServerT,
 };
@@ -8,12 +11,9 @@ impl Server<Follower> {
         Server {
             _state: std::marker::PhantomData,
             name: self.name,
-            message_rx: self.message_rx,
-            order_rx: self.order_rx,
-            self_transmitter: self.self_transmitter,
-            neighbours: self.neighbours,
             info: self.info,
             settings: self.settings,
+            components: self.components,
         }
     }
     fn on_heartbeat_received(mut self, _leader_id: usize, _current_term: usize) -> Box<dyn ServerT> {
@@ -32,7 +32,6 @@ impl Server<Follower> {
 
     fn on_timer_expired(mut self) -> Box<dyn ServerT> {
         self.info.current_term += 1;
-        //convert to candidate
         self.info.voted_for = Some(self.name);
         self.info.votes_received = vec![self.name];
         let last_term = match self.info.log.last() {
@@ -50,7 +49,7 @@ impl Server<Follower> {
         log::debug!("{} is spawning a timer", self.name);
         self.update_timer(ServerMessage::TimerExpired, None);
 
-        self.neighbours.values().for_each(|follower| follower.send(message.clone()).unwrap());
+        self.components.neighbours.values().for_each(|follower| follower.send(message.clone()).unwrap());
         Box::new(self.to_candidate())
     }
 
@@ -95,17 +94,30 @@ impl Server<Follower> {
         Box::new(self)
     }
 
-    fn on_send_info(self, msg: String) -> (bool, Box<dyn ServerT>) {
-        if self.info.current_leader.is_none() {
-            // TODO solve this
-            panic!("Follower {} has no leader", self.name);
-        }
-        let leader = self.info.current_leader.unwrap();
-        let message = ServerMessage::SendInfo { msg: msg};
-        self.send_message(message, leader).unwrap();
-        return (false, Box::new(self));
+    fn on_send_info(mut self, msg: String) -> (bool, Box<dyn ServerT>) {
+        self.components.message_queue.push_back(msg);
+        (false, self.on_forward_info())
     }
 
+
+    fn on_forward_info(mut self) -> Box<dyn ServerT>{
+        if self.info.current_leader.is_none() {
+            let sender = self.get_self_sender().clone();
+            thread::spawn(move || {
+                sleep(Duration::from_secs(1));
+                sender.send(ServerMessage::ForwardInfo).unwrap();
+            });
+        } else {
+            let leader = self.info.current_leader.unwrap();
+            let queue = &(self.components.message_queue);
+            for mess in queue {
+                let message = ServerMessage::SendInfo { msg: mess.clone() };
+                self.send_message(message, leader).unwrap();
+            }
+            self.components.message_queue.clear();
+        }
+        Box::new(self)
+    }
 
     fn on_log_response (mut self, _responser_id: usize, responder_term: usize, _ack: usize, _answer: bool) -> Box<dyn ServerT> {
         if responder_term > self.info.current_term {
@@ -176,6 +188,7 @@ impl ServerT for Server<Follower> {
                 ack,
                 answer
             } => self.on_log_response(responder_id, responder_term, ack, answer),
+            ServerMessage::ForwardInfo => self.on_forward_info(),
             ServerMessage::VoteResponse {
                 responser_id,
                 responder_term,

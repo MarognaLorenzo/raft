@@ -224,8 +224,6 @@ pub fn initialize_servers(n_servers: usize) -> (Vec<Server<Initial>>, Vec<Sender
             }
         }
     }
-    log::debug!("Neighbours: {:?}", servers[0].neighbours);
-    log::debug!("Senders size: {}", servers[0].neighbours_len());
 
     return (servers, controllers);
 }

@@ -15,7 +15,7 @@ use super::Server;
 
 impl<T: StateT> Server<T> {
     pub fn neighbours_len(&self) -> usize {
-        self.neighbours.len()
+        self.components.neighbours.len()
     }
 
     pub fn send_message(
@@ -23,17 +23,17 @@ impl<T: StateT> Server<T> {
         message: ServerMessage,
         neighbour: usize,
     ) -> Result<(), SendError<ServerMessage>> {
-        self.neighbours[&neighbour].send(message)
+        self.components.neighbours[&neighbour].send(message)
     }
 
     pub fn open_message(&self) -> ServerMessage {
-        self.message_rx.recv().unwrap()
+        self.components.message_rx.recv().unwrap()
     }
     pub fn get_name(&self) -> usize {
         self.name
     }
     pub fn get_self_sender(&self) -> &Sender<ServerMessage> {
-        &self.self_transmitter
+        &self.components.self_transmitter
     }
 
     pub fn update_timer(&mut self, message: ServerMessage, time: Option<usize>) {
@@ -220,8 +220,8 @@ where
     T: StateT,
 {
     pub fn activate(self) {
-        let order_receiver = self.order_rx.clone();
-        let message_receiver = self.message_rx.clone();
+        let order_receiver = self.components.order_rx.clone();
+        let message_receiver = self.components.message_rx.clone();
 
         let micros = rand::rng().random_range(50..400);
         thread::sleep(Duration::from_micros(micros));

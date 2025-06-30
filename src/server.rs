@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 pub mod consensus_info;
 pub mod order;
@@ -6,9 +5,10 @@ use order::Order;
 pub mod message;
 pub mod server_settings;
 use server_settings::*;
-use crossbeam::channel::*;
 use message::ServerMessage;
 
+pub mod component;
+use component::*;
 use crate::server::consensus_info::ConsensusInfo;
 
 #[derive(Debug)]
@@ -40,12 +40,9 @@ impl StateT for Candidate {}
 pub struct Server<S: StateT> {
     _state: std::marker::PhantomData<S>,
     name: usize,
-    order_rx: Receiver<Order>,
-    message_rx: Receiver<ServerMessage>,
-    self_transmitter: Sender<ServerMessage>,
-    pub neighbours: HashMap<usize, Sender<ServerMessage>>,
     info: ConsensusInfo,
     settings: ServerSettings,
+     components: ServerComponents, 
 }
 
 mod candidate;
