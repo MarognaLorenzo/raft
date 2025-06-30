@@ -125,7 +125,7 @@ impl Server<Leader> {
                     .take(ready - 1)
                     .skip(self.info.commit_length)
                 {
-                    println!("{} delivers message to application: {}", self.name, log.data)
+                    log::info!("{} delivers message to application: {}", self.name, log.data)
                 };
                 self.info.commit_length = ready;
             }

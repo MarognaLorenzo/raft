@@ -8,15 +8,23 @@ use std::time::Duration;
 use std::{thread, usize};
 
 use crate::component::order::Order;
+use std::env;
 
 fn main() {
+    env::set_var("RUST_LOG", "info");
+
+    env_logger::init();
+
+    // Example log call (can be from any thread)
+    log::info!("Application started");
+
     let n_servers = 5usize;
     let (servers, controllers) = initialize_servers(n_servers);
 
     let servers: Vec<Server<Follower>> = servers.into_iter().map(|ser| ser.completed()).collect();
-    // println!("Server 0 amount of neighbours: {}", servers[0].neighbours_len());
+    // log::info!("Server 0 amount of neighbours: {}", servers[0].neighbours_len());
 
-    let handles: Vec<_> = servers
+    let _handles: Vec<_> = servers
         .into_iter()
         .map(|server| {
             let mut thread_name = "Server-".to_string();
@@ -26,10 +34,10 @@ fn main() {
                 let to = (from + 1) % n_servers;
                 let builded_message: ServerMessage = ServerMessage::Ping { from: from, to: to };
                 if let Err(e) = server.send_message(builded_message, to) {
-                    println!("Failed to send: {:?}", e.0);
+                    log::info!("Failed to send: {:?}", e.0);
                 }
                 let received_message = server.open_message();
-                println!(
+                log::info!(
                     "I ({}) received a message! {:?}",
                     server.get_name(),
                     received_message
@@ -55,8 +63,7 @@ fn main() {
 
     wait_for_user();
 
-    println!();
-    println!("Sending INFO!");
+    log::info!("\nSending INFO!");
 
     controllers
         .iter()
@@ -64,8 +71,8 @@ fn main() {
 
     thread::sleep(Duration::from_secs(3));
 
-    // println!();
-    // println!("Starting changing states");
+    // log::info!();
+    // log::info!("Starting changing states");
     //
     // controllers.iter().enumerate().for_each(|(i, tx)| {
     //     let order: Order;
@@ -79,18 +86,13 @@ fn main() {
 
     thread::sleep(Duration::from_secs(3));
 
-    println!();
-    println!("Exiting from everyone!");
+    log::info!("\nExiting from everyone!");
     wait_for_user();
     controllers
         .iter()
         .for_each(|tx| tx.send(Order::Exit).unwrap());
 
-    for handle in handles {
-        // handle.join().unwrap();
-    }
-
-    println!("DONE");
+    log::info!("DONE");
 }
 
 pub fn initialize_servers(n_servers: usize) -> (Vec<Server<Initial>>, Vec<Sender<Order>>) {
@@ -116,7 +118,7 @@ pub fn initialize_servers(n_servers: usize) -> (Vec<Server<Initial>>, Vec<Sender
         })
         .collect();
 
-    println!("Servers {}", servers.len());
+    log::info!("Servers {}", servers.len());
 
     for (i, sender) in senders.iter().enumerate() {
         for (j, server) in servers.iter_mut().enumerate() {
@@ -125,16 +127,14 @@ pub fn initialize_servers(n_servers: usize) -> (Vec<Server<Initial>>, Vec<Sender
             }
         }
     }
-    println!("Neighbours: {:?}", servers[0].neighbours);
-    println!("Senders size: {}", servers[0].neighbours_len());
+    log::info!("Neighbours: {:?}", servers[0].neighbours);
+    log::info!("Senders size: {}", servers[0].neighbours_len());
 
     return (servers, controllers);
 }
 
 fn wait_for_user() {
-    println!();
-    print!("Press Enter to proceed...");
-    println!();
+    log::info!("\nPress Enter to proceed...\n");
     io::stdout().flush().unwrap(); // Make sure the prompt is printed immediately
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();

@@ -109,7 +109,7 @@ impl Server<Candidate> {
             last_term: last_term,
         };
 
-        println!("{} is spawning a timer", self.name);
+        log::info!("{} is spawning a timer", self.name);
         self.update_timer(ServerMessage::TimerExpired, None);
         self.neighbours.values().for_each(|follower| follower.send(message.clone()).unwrap());
         Box::new(self)
@@ -164,17 +164,17 @@ impl Server<Candidate> {
             let quorum = (self.total_elements + 1).div_ceil(2) as usize;
             if self.info.votes_received.len() >= quorum {
                 self.info.current_leader = Some(self.name);
-                println!(
+                log::info!(
                     "\n {} got elected to leader {:?}",
                     self.name, self.info.votes_received
                 );
-                println!("{} about to be elected leader: {:?}", self.name, self.settings );
+                log::info!("{} about to be elected leader: {:?}", self.name, self.settings );
                 let neighs:Vec<_> = self.neighbours.keys().copied().collect();
                 for follower in neighs{
                     self.info.sent_length.insert(follower, self.info.log.len());
                     self.info.acked_length.insert(follower, 0);
                     self.replicate_log(follower);
-                    println!("{} Sent log to {}", self.name, follower);
+                    log::info!("{} Sent log to {}", self.name, follower);
                 }
                 self.self_transmitter.send(ServerMessage::SendHeartBeat).unwrap();
                 Box::new(self.to_leader())

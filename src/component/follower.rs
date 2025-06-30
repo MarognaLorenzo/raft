@@ -49,7 +49,7 @@ impl Server<Follower> {
             last_term: last_term,
         };
 
-        println!("{} is spawning a timer", self.name);
+        log::info!("{} is spawning a timer", self.name);
         self.update_timer(ServerMessage::TimerExpired, None);
 
         self.neighbours.values().for_each(|follower| follower.send(message.clone()).unwrap());
