@@ -78,6 +78,60 @@ impl Server<Leader> {
         self.settings.activated = true;
         (false, Box::new(self))
     }
+
+    pub fn on_log_response(
+        mut self,
+        responder_id: usize,
+        responder_term: usize,
+        ack: usize,
+        answer: bool
+    ) -> Box<dyn ServerT> {
+        if self.info.current_term == responder_term {
+            if answer && ack >= self.info.acked_length[&responder_id] {
+                self.info.sent_length.insert(responder_id, ack);
+                self.info.acked_length.insert(responder_id, ack);
+                // TODO CommitLogEntries
+            } else if self.info.sent_length[&responder_id] > 0 {
+                self.info.sent_length.entry(responder_id).and_modify(|v| *v-=1 );
+                self.replicate_log(responder_id);
+            }
+        } else if responder_term > self.info.current_term {
+            self.info.current_term = responder_term;
+            self.info.voted_for = None;
+            self.update_timer(ServerMessage::TimerExpired, None);
+            return Box::new(self.to_follower());
+        }
+        return Box::new(self);
+    }
+
+
+    fn acks(&self, len: usize) -> usize {
+        self.info.acked_length
+            .values()
+            .filter(|&acked_len| *acked_len >= len)
+            .count()
+    }
+
+    pub fn commit_log_entries(&mut self) {
+        let min_acks = (self.total_elements + 1).div_ceil(2) as usize;
+        let max_ready = (1..self.info.log.len())
+            .rev()
+            .find(|len| self.acks(*len) >= min_acks);
+
+        if let Some(ready) = max_ready {
+            if ready > self.info.commit_length && self.info.log[ready-1].term == self.info.current_term {
+                for log in self.info.log
+                    .iter()
+                    .take(ready - 1)
+                    .skip(self.info.commit_length)
+                {
+                    println!("{} delivers message to application: {}", self.name, log.data)
+                };
+                self.info.commit_length = ready;
+            }
+        }
+    }
+
 }
 
 impl ServerT for Server<Leader> {
@@ -91,7 +145,12 @@ impl ServerT for Server<Leader> {
     }
     fn handle_server_message(self: Box<Self>, message: ServerMessage) -> Box<dyn ServerT> {
         match message {
-            // TODO : On VoteResponse on_log response
+            ServerMessage::LogResponse {
+                responder_id,
+                responder_term,
+                ack,
+                answer
+            } => self.on_log_response(responder_id, responder_term, ack, answer),
             ServerMessage:: SendInfo { msg } => self.on_send_info(msg).1,
             ServerMessage::VoteResponse {
                 responser_id,

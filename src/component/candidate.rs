@@ -144,6 +144,15 @@ impl Server<Candidate> {
         (false, Box::new(self))
     }
 
+    fn on_log_response (mut self, _responser_id: usize, responder_term: usize, _ack: usize, _answer: bool) -> Box<dyn ServerT> {
+        if responder_term > self.info.current_term {
+            self.info.current_term = responder_term;
+            self.info.voted_for = None;
+            self.update_timer(ServerMessage::TimerExpired, None);
+        }
+        return Box::new(self.to_follower());
+    }
+
     fn on_vote_receive(
         mut self,
         responser_id: usize,
@@ -222,6 +231,12 @@ impl ServerT for Server<Candidate> {
                 responder_term,
                 response,
             } => self.on_vote_receive(responser_id, responder_term, response),
+            ServerMessage::LogResponse {
+                responder_id,
+                responder_term,
+                ack,
+                answer
+            } => self.on_log_response(responder_id, responder_term, ack, answer),
             ServerMessage::SendInfo { msg } => self.on_send_info(msg).1,
             _ => Box::new(*self),
         }
