@@ -93,8 +93,8 @@ fn main() {
         }
 
         // Attempt to parse the first part as a number (i32)
-        let number_result = parts[0].parse::<usize>();
-        let word = parts[1]; // The second part is the word
+        let number_result = parts[1].parse::<usize>();
+        let word = parts[0]; // The second part is the word
 
         // --- 4. Process the command ---
         match number_result {
@@ -133,6 +133,11 @@ fn main() {
                         controllers[number].send(Order::Reconnect).unwrap();
                     },
 
+                    "ls" => {
+
+                        println!("  Listing {}", number);
+                        controllers[number].send(Order::ListLog).unwrap();
+                    }
                     "rust" => println!("  This is a Rust command!"),
                     _ => println!("  The word is not a valid command"),
                 }

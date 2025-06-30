@@ -55,6 +55,12 @@ impl Server<Follower> {
         self.neighbours.values().for_each(|follower| follower.send(message.clone()).unwrap());
         Box::new(self.to_candidate())
     }
+
+    fn on_list_log(self) -> (bool, Box<dyn ServerT>) {
+        self.handle_list_log();
+        return (false, Box::new(self));
+    }
+
     fn on_vote_request(
         mut self,
         candidate_id: usize,
@@ -93,6 +99,7 @@ impl Server<Follower> {
 
     fn on_send_info(mut self, msg: String) -> (bool, Box<dyn ServerT>) {
         if self.info.current_leader.is_none() {
+            // TODO solve this
             panic!("Follower {} has no leader", self.name);
         }
         let leader = self.info.current_leader.unwrap();
@@ -130,6 +137,7 @@ impl ServerT for Server<Follower> {
             Order::Exit => (true, Box::new(*self)),
             Order::ConvertToFollower => (false, Box::new(*self)),
             Order::ConvertToCandidate => (false, Box::new((*self).to_candidate())),
+            Order::ListLog => self.on_list_log(),
             _ => (false, Box::new(*self)),
         }
     }

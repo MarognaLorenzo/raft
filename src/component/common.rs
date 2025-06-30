@@ -1,3 +1,4 @@
+use log::info;
 use rand::Rng;
 use std::{cmp::min, fmt, thread, time::Duration};
 
@@ -114,6 +115,11 @@ impl<T: StateT> Server<T> {
         return received_newer_term;
     }
 
+    pub fn handle_list_log(&self ){
+        let log : Vec<_> = self.info.log.iter().map(|entry| entry.data.clone()).collect();
+        let log = log.join("\n");
+        info!("Log of {}: \n  {}", self.name, log);
+    }
 
     pub fn handle_log_request(
         &mut self,

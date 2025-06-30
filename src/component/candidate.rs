@@ -192,6 +192,10 @@ impl Server<Candidate> {
             Box::new(self)
         }
     }
+    fn on_list_log(self) -> (bool, Box<dyn ServerT>) {
+        self.handle_list_log();
+        return (false, Box::new(self));
+    }
 }
 
 impl ServerT for Server<Candidate> {
@@ -244,6 +248,7 @@ impl ServerT for Server<Candidate> {
 
     fn handle_order(self: Box<Self>, order: Order) -> (bool, Box<dyn ServerT>) {
         match order {
+            Order::ListLog => self.on_list_log(),
             Order::Disconnect => self.on_disconnect(),
             Order::Reconnect => self.on_connect(),
             Order::SendInfo { info } => self.on_send_info(info),

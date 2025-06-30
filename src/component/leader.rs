@@ -26,6 +26,11 @@ impl Server<Leader> {
         }
     }
 
+    fn on_list_log(self) -> (bool, Box<dyn ServerT>) {
+        self.handle_list_log();
+        return (false, Box::new(self));
+    }
+
     fn on_send_info(mut self, msg:String) -> (bool, Box<dyn ServerT>) {
         let entry = LogEntry { data: msg, term: self.info.current_term };
         self.info.log.push(entry);
@@ -138,6 +143,7 @@ impl ServerT for Server<Leader> {
     fn handle_order(self: Box<Self>, order: Order) -> (bool, Box<dyn ServerT>) {
         match order {
             Order::Disconnect => self.on_disconnect(),
+            Order::ListLog => self.on_list_log(),
             Order::Reconnect => self.on_connect(),
             Order::SendInfo { info } => self.on_send_info(info),
             _ => (false, Box::new(*self)),
