@@ -1,12 +1,12 @@
-mod component;
-use component::message::ServerMessage;
-use component::*;
+mod server;
+use server::message::ServerMessage;
+use server::*;
 use crossbeam::channel::*;
 use std::collections::HashMap;
 use std::io::{self, Write};
 use std::{thread, usize};
 
-use crate::component::order::Order;
+use crate::server::order::Order;
 use std::env;
 
 fn main() {

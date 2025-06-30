@@ -9,7 +9,7 @@ use server_settings::*;
 use crossbeam::channel::*;
 use message::ServerMessage;
 
-use crate::component::consensus_info::ConsensusInfo;
+use crate::server::consensus_info::ConsensusInfo;
 
 #[derive(Debug)]
 pub struct Initial;
