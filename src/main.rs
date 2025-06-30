@@ -4,7 +4,6 @@ use component::*;
 use crossbeam::channel::*;
 use std::collections::HashMap;
 use std::io::{self, Write};
-use std::time::Duration;
 use std::{thread, usize};
 
 use crate::component::order::Order;
@@ -189,6 +188,7 @@ fn main() {
     //     .iter()
     //     .for_each(|tx| tx.send(Order::Exit).unwrap());
     //
+    wait_for_user();
     log::info!("DONE");
 }
 

@@ -1,15 +1,9 @@
-use std::collections::HashMap;
-use std::path::Component;
 use std::thread;
 use std::time::Duration;
 
-use crossbeam::channel::unbounded;
-use crossbeam::channel::{self, Receiver, Sender};
-use crossbeam::select;
 
 use crate::component::consensus_info::LogEntry;
-use crate::component::StateT;
-use crate::component::{common, message::ServerMessage, order::Order, ServerT};
+use crate::component::{message::ServerMessage, order::Order, ServerT};
 
 use super::{Candidate, Follower, Leader, Server};
 impl Server<Candidate> {
@@ -39,7 +33,6 @@ impl Server<Candidate> {
         Server {
             _state: std::marker::PhantomData,
             name: self.name,
-            total_elements: self.total_elements,
             message_rx: self.message_rx,
             order_rx: self.order_rx,
             self_transmitter: self.self_transmitter,
@@ -53,7 +46,6 @@ impl Server<Candidate> {
         Server {
             _state: std::marker::PhantomData,
             name: self.name,
-            total_elements: self.total_elements,
             message_rx: self.message_rx,
             order_rx: self.order_rx,
             self_transmitter: self.self_transmitter,
@@ -63,7 +55,7 @@ impl Server<Candidate> {
         }
     }
 
-    fn on_heartbeat_received(mut self, leader_id: usize, current_term: usize) -> Box<dyn ServerT> {
+    fn on_heartbeat_received(mut self, _leader_id: usize, _current_term: usize) -> Box<dyn ServerT> {
         self.update_timer(ServerMessage::TimerExpired, None);
         Box::new(self)
     }
@@ -161,7 +153,7 @@ impl Server<Candidate> {
     ) -> Box<dyn ServerT> {
         if responder_term == self.info.current_term && response {
             self.info.votes_received.push(responser_id);
-            let quorum = (self.total_elements + 1).div_ceil(2) as usize;
+            let quorum = (self.settings.total_elements + 1).div_ceil(2) as usize;
             if self.info.votes_received.len() >= quorum {
                 self.info.current_leader = Some(self.name);
                 log::info!(
@@ -200,9 +192,12 @@ impl Server<Candidate> {
 
 impl ServerT for Server<Candidate> {
     fn handle_server_message(
-        mut self: Box<Self>,
+        self: Box<Self>,
         message: super::message::ServerMessage,
     ) -> Box<dyn ServerT> {
+        if !self.settings.activated {
+            return Box::new(*self);
+        }
         match message {
             ServerMessage::LogRequest {
                 leader_id,
@@ -254,7 +249,6 @@ impl ServerT for Server<Candidate> {
             Order::SendInfo { info } => self.on_send_info(info),
             Order::Exit => (true, Box::new(*self)),
             Order::ConvertToFollower => (false, Box::new((*self).to_follower())),
-            Order::ConvertToCandidate => (false, Box::new(*self)),
             _ => (false, Box::new(*self)),
         }
     }

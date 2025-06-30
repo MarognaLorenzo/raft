@@ -1,7 +1,6 @@
 use crate::component::{
     consensus_info::LogEntry, message::ServerMessage, order::Order, Candidate, ServerT,
 };
-use crossbeam::channel::{unbounded, Receiver};
 
 use super::{Follower, Server};
 impl Server<Follower> {
@@ -9,7 +8,6 @@ impl Server<Follower> {
         Server {
             _state: std::marker::PhantomData,
             name: self.name,
-            total_elements: self.total_elements,
             message_rx: self.message_rx,
             order_rx: self.order_rx,
             self_transmitter: self.self_transmitter,
@@ -18,7 +16,7 @@ impl Server<Follower> {
             settings: self.settings,
         }
     }
-    fn on_heartbeat_received(mut self, leader_id: usize, current_term: usize) -> Box<dyn ServerT> {
+    fn on_heartbeat_received(mut self, _leader_id: usize, _current_term: usize) -> Box<dyn ServerT> {
         self.update_timer(ServerMessage::TimerExpired, None);
         Box::new(self)
     }
@@ -97,7 +95,7 @@ impl Server<Follower> {
         Box::new(self)
     }
 
-    fn on_send_info(mut self, msg: String) -> (bool, Box<dyn ServerT>) {
+    fn on_send_info(self, msg: String) -> (bool, Box<dyn ServerT>) {
         if self.info.current_leader.is_none() {
             // TODO solve this
             panic!("Follower {} has no leader", self.name);
@@ -135,7 +133,6 @@ impl ServerT for Server<Follower> {
             Order::Disconnect => self.on_disconnect(),
             Order::Reconnect => self.on_connect(),
             Order::Exit => (true, Box::new(*self)),
-            Order::ConvertToFollower => (false, Box::new(*self)),
             Order::ConvertToCandidate => (false, Box::new((*self).to_candidate())),
             Order::ListLog => self.on_list_log(),
             _ => (false, Box::new(*self)),
@@ -143,7 +140,7 @@ impl ServerT for Server<Follower> {
     }
 
     fn handle_server_message(
-        mut self: Box<Self>,
+        self: Box<Self>,
         message: super::message::ServerMessage,
     ) -> Box<dyn ServerT> {
         match message {

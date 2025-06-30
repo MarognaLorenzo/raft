@@ -16,21 +16,17 @@ pub struct Initial;
 #[derive(Debug)]
 pub struct Leader;
 #[derive(Debug)]
-pub struct Candidate {
-    voting_received: usize,
-}
+pub struct Candidate;
 #[derive(Debug)]
-pub struct Follower {
-    leader: usize,
-}
+pub struct Follower;
 
 pub trait ServerT: Debug + Display {
     fn handle_server_message(self: Box<Self>, _message: ServerMessage) -> Box<dyn ServerT> {
-        panic!("I should be implemented!")
+        unimplemented!()
     }
 
     fn handle_order(self: Box<Self>, _order: Order) -> (bool, Box<dyn ServerT>) {
-        panic!("I should be implemented!")
+        unimplemented!()
     }
 }
 pub trait StateT {}
@@ -44,7 +40,6 @@ impl StateT for Candidate {}
 pub struct Server<S: StateT> {
     _state: std::marker::PhantomData<S>,
     name: usize,
-    total_elements: usize,
     order_rx: Receiver<Order>,
     message_rx: Receiver<ServerMessage>,
     self_transmitter: Sender<ServerMessage>,

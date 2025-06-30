@@ -1,7 +1,7 @@
 use crate::component::consensus_info::ConsensusInfo;
 use crate::component::server_settings::ServerSettings;
 use crate::component::{message::ServerMessage, order::Order};
-use crate::component::{Candidate, Follower, ServerT};
+use crate::component::{Follower, ServerT};
 
 use super::{Initial, Server};
 use crossbeam::channel::*;
@@ -19,13 +19,12 @@ impl Server<Initial> {
         Server {
             _state: std::marker::PhantomData,
             name,
-            total_elements,
             order_rx: command_rx,
             message_rx: network_rx,
             self_transmitter: network_tx,
             neighbours,
             info: ConsensusInfo::new(),
-            settings: ServerSettings::new(),
+            settings: ServerSettings::new(total_elements),
         }
     }
 
@@ -37,7 +36,6 @@ impl Server<Initial> {
         let component = Server {
             _state: std::marker::PhantomData,
             name: self.name,
-            total_elements: self.total_elements,
             order_rx: self.order_rx,
             message_rx: self.message_rx,
             self_transmitter: self.self_transmitter,
@@ -51,12 +49,12 @@ impl Server<Initial> {
 }
 
 impl ServerT for Server<Initial> {
-    fn handle_order(self: Box<Self>, order: Order) -> (bool, Box<dyn ServerT>) {
+    fn handle_order(self: Box<Self>, _order: Order) -> (bool, Box<dyn ServerT>) {
         (true, Box::new(*self))
     }
     fn handle_server_message(
         self: Box<Self>,
-        message: super::message::ServerMessage,
+        _message: ServerMessage,
     ) -> Box<dyn ServerT> {
         Box::new(*self)
     }

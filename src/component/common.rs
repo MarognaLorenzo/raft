@@ -8,7 +8,7 @@ use crossbeam::{
 };
 
 use crate::component::{
-    consensus_info::LogEntry, message::ServerMessage, order::Order, ServerT, StateT,
+    consensus_info::LogEntry, message::ServerMessage, ServerT, StateT,
 };
 
 use super::Server;
@@ -219,11 +219,11 @@ where
     Server<T>: ServerT,
     T: StateT,
 {
-    pub fn activate(mut self) {
+    pub fn activate(self) {
         let order_receiver = self.order_rx.clone();
         let message_receiver = self.message_rx.clone();
 
-        let micros = rand::thread_rng().gen_range(50..400);
+        let micros = rand::rng().random_range(50..400);
         thread::sleep(Duration::from_micros(micros));
 
         let mut boxed: Box<dyn ServerT> = Box::new(self);

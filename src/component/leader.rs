@@ -7,7 +7,6 @@ impl Server<Leader> {
         Server {
             _state: std::marker::PhantomData,
             name: self.name,
-            total_elements: self.total_elements,
             message_rx: self.message_rx,
             order_rx: self.order_rx,
             self_transmitter: self.self_transmitter,
@@ -118,7 +117,7 @@ impl Server<Leader> {
     }
 
     pub fn commit_log_entries(&mut self) {
-        let min_acks = (self.total_elements + 1).div_ceil(2) as usize;
+        let min_acks = (self.settings.total_elements + 1).div_ceil(2) as usize;
         let max_ready = (1..self.info.log.len())
             .rev()
             .find(|len| self.acks(*len) >= min_acks);
