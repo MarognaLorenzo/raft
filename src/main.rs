@@ -11,7 +11,6 @@ use std::env;
 
 fn main() {
     env::set_var("RUST_LOG", "info");
-
     env_logger::init();
 
     // Example log call (can be from any thread)
@@ -33,7 +32,7 @@ fn main() {
                 let to = (from + 1) % n_servers;
                 let builded_message: ServerMessage = ServerMessage::Ping { from: from, to: to };
                 if let Err(e) = server.send_message(builded_message, to) {
-                    log::error!("Failed to send: {:?}", e.0);
+                    log::error!("Failed to send: {:?}", e);
                 }
                 let received_message = server.open_message();
                 log::debug!(
@@ -52,11 +51,14 @@ fn main() {
         })
         .collect();
 
-    // todo!("Add delays and disconnections from Servers");main
 
     println!("Command Parser");
-    println!("Enter commands in the format: <number> <word>");
+    println!("Enter commands in the format: <command> <server_index>");
     println!("Type 'exit' to quit the program.");
+    println!("Type 'ls' to list server content");
+    println!("Type 'dis' to disconnect a server");
+    println!("Type 'con' to reconnect a server");
+    println!("Type 's_<message>' to send a message to a server");
 
     // The main loop for processing commands
     loop {
@@ -87,7 +89,7 @@ fn main() {
 
         // Check if the command has exactly two parts (a number and a word)
         if parts.len() != 2 {
-            println!("Invalid command format. Please use: <number> <word>");
+            println!("Invalid command format. Please use: <word> <number>");
             continue; // Go to the next iteration of the loop
         }
 
@@ -149,47 +151,6 @@ fn main() {
         }
         println!("----------------------------------"); // Separator for clarity
     }
-
-    // wait_for_user();
-    // controllers.iter().for_each(|tx| tx.send(Order::Disconnect).unwrap());
-    //
-    //
-    // wait_for_user();
-    // controllers.iter().for_each(|tx| tx.send(Order::Reconnect).unwrap());
-    //
-    // wait_for_user();
-    //
-    // log::info!("\nSending INFO!");
-    //
-    // controllers
-    //     .iter()
-    //     .for_each(|tx| tx.send(Order::SendInfo { info: "Hello myself".to_string() }).unwrap());
-    //
-    // thread::sleep(Duration::from_secs(3));
-
-    // log::info!();
-    // log::info!("Starting changing states");
-    //
-    // controllers.iter().enumerate().for_each(|(i, tx)| {
-    //     let order: Order;
-    //     if i % 2 == 0 {
-    //         order = Order::ConvertToFollower;
-    //     } else {
-    //         order = Order::SendInfo { info: i }
-    //     }
-    //     tx.send(order).unwrap();
-    // });
-
-    // thread::sleep(Duration::from_secs(3));
-    //
-    // log::info!("\nExiting from everyone!");
-    // wait_for_user();
-    // controllers
-    //     .iter()
-    //     .for_each(|tx| tx.send(Order::Exit).unwrap());
-    //
-    wait_for_user();
-    log::info!("DONE");
 }
 
 pub fn initialize_servers(n_servers: usize) -> (Vec<Server<Initial>>, Vec<Sender<Order>>) {
@@ -226,11 +187,4 @@ pub fn initialize_servers(n_servers: usize) -> (Vec<Server<Initial>>, Vec<Sender
     }
 
     return (servers, controllers);
-}
-
-fn wait_for_user() {
-    log::info!("\nPress Enter to proceed...\n");
-    io::stdout().flush().unwrap(); // Make sure the prompt is printed immediately
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).unwrap();
 }

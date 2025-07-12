@@ -1,9 +1,9 @@
-use log::info;
-use rand::Rng;
+use log::{info, log};
+use rand::{random, rng, Rng};
 use std::{cmp::min, fmt, thread, time::Duration};
-
+use rand_distr::{Distribution, Normal, NormalError};
 use crossbeam::{
-    channel::{select_biased, unbounded, SendError, Sender},
+    channel::{select_biased, unbounded, SendError, SendTimeoutError, Sender},
     select,
 };
 
@@ -22,8 +22,17 @@ impl<T: StateT> Server<T> {
         &self,
         message: ServerMessage,
         neighbour: usize,
-    ) -> Result<(), SendError<ServerMessage>> {
-        self.components.neighbours[&neighbour].send(message)
+    ) -> Result<(), ServerMessage> {
+        let mut rng = rng();
+        let distribution = rand_distr::Exp::new(0.5).unwrap();
+        let delay = distribution.sample(&mut rng);
+        thread::sleep(Duration::from_millis(delay as u64));
+        if self.components.neighbours[&neighbour].send(message.clone()).is_err() {
+            return Err(message);
+        } else {
+            return Ok(());
+        }
+
     }
 
     pub fn open_message(&self) -> ServerMessage {
