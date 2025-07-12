@@ -1,4 +1,4 @@
-use crate::server::consensus_info::LogEntry;
+use crate::server::structures::consensus_info::LogEntry;
 
 #[derive(Debug, Clone)]
 pub enum ServerMessage {

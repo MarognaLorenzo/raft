@@ -1,15 +1,20 @@
 use std::fmt::{Debug, Display};
-pub mod consensus_info;
-pub mod order;
-use order::Order;
-pub mod message;
-pub mod server_settings;
-use server_settings::*;
-use message::ServerMessage;
 
-pub mod component;
-use component::*;
-use crate::server::consensus_info::ConsensusInfo;
+// Import modules from the structures directory
+pub mod structures {
+    pub mod consensus_info;
+    pub mod message;
+    pub mod order;
+    pub mod server_settings;
+    pub mod components;
+}
+
+// Re-export commonly used types for convenience
+pub use structures::consensus_info::ConsensusInfo;
+pub use structures::message::ServerMessage;
+pub use structures::order::Order;
+pub use structures::server_settings::ServerSettings;
+pub use structures::components::ServerComponents;
 
 #[derive(Debug)]
 pub struct Initial;

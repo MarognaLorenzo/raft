@@ -2,7 +2,7 @@ use std::{thread::{self, sleep}, time::Duration};
 
 
 use crate::server::{
-    consensus_info::LogEntry, message::ServerMessage, order::Order, Candidate, ServerT,
+    structures::{consensus_info::LogEntry, message::ServerMessage, order::Order}, Candidate, ServerT,
 };
 
 use super::{Follower, Server};
@@ -153,7 +153,7 @@ impl ServerT for Server<Follower> {
 
     fn handle_server_message(
         self: Box<Self>,
-        message: super::message::ServerMessage,
+        message: ServerMessage,
     ) -> Box<dyn ServerT> {
         match message {
             ServerMessage::LogRequest {

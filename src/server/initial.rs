@@ -1,7 +1,7 @@
-use crate::server::component::ServerComponents;
-use crate::server::consensus_info::ConsensusInfo;
-use crate::server::server_settings::ServerSettings;
-use crate::server::{message::ServerMessage, order::Order};
+use crate::server::structures::components::ServerComponents;
+use crate::server::structures::consensus_info::ConsensusInfo;
+use crate::server::structures::server_settings::ServerSettings;
+use crate::server::structures::{message::ServerMessage, order::Order};
 use crate::server::{Follower, ServerT};
 
 use super::{Initial, Server};

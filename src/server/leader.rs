@@ -1,4 +1,4 @@
-use crate::server::{consensus_info::LogEntry, message::ServerMessage, order::Order, Follower, ServerT};
+use crate::server::{structures::{consensus_info::LogEntry, message::ServerMessage, order::Order}, Follower, ServerT};
 
 use super::{Leader, Server};
 

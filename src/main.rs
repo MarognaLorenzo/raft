@@ -1,12 +1,12 @@
 mod server;
-use server::message::ServerMessage;
+use server::structures::message::ServerMessage;
 use server::*;
 use crossbeam::channel::*;
 use std::collections::HashMap;
 use std::io::{self, Write};
 use std::{thread, usize};
 
-use crate::server::order::Order;
+use crate::server::structures::order::Order;
 use std::env;
 
 fn main() {

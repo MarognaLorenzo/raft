@@ -8,7 +8,7 @@ use crossbeam::{
 };
 
 use crate::server::{
-    consensus_info::LogEntry, message::ServerMessage, ServerT, StateT,
+    structures::{consensus_info::LogEntry, message::ServerMessage}, ServerT, StateT,
 };
 
 use super::Server;

@@ -2,7 +2,7 @@ use std::collections::{HashMap, VecDeque};
 
 use crossbeam::channel::{Receiver, Sender};
 
-use crate::server::{message::ServerMessage, order::Order};
+use crate::server::structures::{message::ServerMessage, order::Order};
 
 #[derive(Debug, Clone)]
 pub struct ServerComponents{

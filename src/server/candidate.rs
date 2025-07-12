@@ -2,15 +2,16 @@ use std::thread::{self, sleep};
 use std::time::Duration;
 
 
-use crate::server::consensus_info::LogEntry;
-use crate::server::{message::ServerMessage, order::Order, ServerT};
+use crate::server::structures::consensus_info::LogEntry;
+use crate::server::structures::{message::ServerMessage, order::Order};
+use crate::server::{ServerT};
 
 use super::{Candidate, Follower, Leader, Server};
 impl Server<Candidate> {
     pub fn candidate(&self) {
         for neigh in self.components.neighbours.values() {
             neigh
-                .send(super::message::ServerMessage::VoteRequest {
+                .send(ServerMessage::VoteRequest {
                     candidate_id: self.name,
                     candidate_term: self.info.current_term,
                     log_length: 0,
@@ -193,7 +194,7 @@ impl Server<Candidate> {
 impl ServerT for Server<Candidate> {
     fn handle_server_message(
         self: Box<Self>,
-        message: super::message::ServerMessage,
+        message: ServerMessage,
     ) -> Box<dyn ServerT> {
         if !self.settings.activated {
             return Box::new(*self);
